@@ -38,20 +38,58 @@ extern int curr_lineno;
 
 extern YYSTYPE cool_yylval;
 
-/*
- *  Add Your own definitions here
- */
+/* ======================================================================== */
+
+/* Custom Definitions */
 
 %}
+/* ======================================================================== */
 
 %option noyywrap
 
-/*
- * Define names for regular expressions here.
- */
+/* Regex Abbreviations */
 
-digit       [0-9]
+DIGIT          [0-9]
 
+/* Symbols */
+DARROW         =>
+ASSIGN         <-
+LE             <=
+SINGLE_CHAR    [;:@,.+-*/~<=(){}] /* 16 chars in total */
+
+/* Keywords ; 19 in total */
+CLASS          (?i:class)
+INHERITS       (?i:else)
+IF             (?i:if)
+THEN           (?i:then)
+ELSE           (?i:else)
+FI             (?i:fi)
+WHILE          (?i:while)
+LOOP           (?i:loop)
+POOL           (?i:pool)
+LET            (?i:let)
+IN             (?i:in)
+CASE           (?i:case)
+OF             (?i:of)
+ESAC           (?i:esac)
+NEW            (?i:new)
+NOT            (?i:not)
+ISVOID         (?:isvoid)
+TRUE           true
+FALSE          false
+
+
+/* TODO consider unmatched ones */
+
+/* ======================================================================== */
+
+/* Start Conditions */
+
+/* INITIAL */
+%x COMMENT 
+
+
+/* ======================================================================== */
 %%
 
  /*
@@ -68,5 +106,14 @@ digit       [0-9]
   *   - Line counting: You should keep the global variable curr_lineno updated
   *     with the correct line number
   */
+
+
+
+{DARROW}            { return DARROW; }
+{ASSIGN}            { return ASSIGN; }
+{LE}                { return LE; }
+{SINGLE_CHAR}       { return *yytext; }
+
+
 
 %%
