@@ -42,6 +42,8 @@ extern YYSTYPE cool_yylval;
 
 /* Custom Definitions */
 
+int comment_level;
+
 %}
 /* ======================================================================== */
 
@@ -49,15 +51,24 @@ extern YYSTYPE cool_yylval;
 
 /* Regex Abbreviations */
 
+INTEGER        [0-9]+
+TYPEID         [A-Z][a-zA-Z0-9_]*
+OBJECTID       [a-z][a-zA-Z0-9_]*
+
+/* Symbols */
+
 WHITESPACE     [ \f\t\r\v]+
 NEWLINE        \n
 
-INTEGER        [0-9]+
-TYPEID         [A-Z][a-zA-Z0-9_]*      
-OBJECTID       [a-z][a-zA-Z0-9_]*
+S_COMMENT      "--"
+M_COMMENT_ST   "(*"
+M_COMMENT_EN   "*)"
 
-
-/* Symbols */
+STRING         \"
+STR_ESCEXCEPT  [\b\t\n\f]
+STR_INVALID    \0
+STR_NEWLINE    \\
+ 
 DARROW         =>
 ASSIGN         <-
 LE             <=
@@ -91,7 +102,8 @@ FALSE          f(?i:alse)
 /* Conditions */
 
 /* %x INITIAL */
-%x COMMENT
+%x MULTICOMMENT
+%x SINGLECOMMENT
 %x STRING
 
 /* ======================================================================== */
@@ -112,12 +124,49 @@ FALSE          f(?i:alse)
   *     with the correct line number
   */
 
- /* COMMENT condition */
+ /* Comment */
 
- /* STRING condition */
+<INITIAL>{S_COMMENT}          { BEGIN(SINGLECOMMENT); }
+<SINGLECOMMENT>{NEWLINE}      { curr_lineno++; BEGIN(INITIAL); }
+<SINGLECOMMENT><<EOF>>        { BEGIN(INITIAL);  }
 
+<INITIAL>{M_COMMENT_ST}       { comment_level = 1; BEGIN(MULTICOMMENT); }
+<INITIAL>{M_COMMENT_EN}       { cool_yylval.error_msg = "Unmatched *)";
+                                BEGIN(INITIAL);
+                                return ERROR;
+                              }
+<MULTICOMMENT>{M_COMMENT_ST}  { comment_level++; }
+<MULTICOMMENT>{NEWLINE}       { curr_lineno++; }
+<MULTICOMMENT><<EOF>>         { cool_yylval.error_msg = "EOF in comment"; 
+                                BEGIN(INITIAL);
+                                return ERROR;
+                              }
+<MULTICOMMENT>{M_COMMENT_EN}  { comment_level--;
+                                if(comment_level==0) BEGIN(INITIAL);  
+                              }
 
- /* INITIAL condition */
+ /* String */
+
+<INITIAL>{STRING}            { string_buf_ptr = string_buf;
+                               BEGIN(STRING);
+                             }
+<STRING><<EOF>>              { cool_yylval.error_msg = "EOF in string constant";
+                               BEGIN(INITIAL);
+                               return ERROR;
+                             }
+<STRING>\\b                  { *string_buf_ptr++ = '\b'; }
+<STRING>\\t                  { *string_buf_ptr++ = '\t'; }
+<STRING>\\n                  { *string_buf_ptr++ = '\n'; }
+<STRING>\\f                  { *string_buf_ptr++ = '\f'; }
+
+<STRING>{STR_NEWLINE}        { curr_lineno++; }
+<STRING>{STRING}             { BEGIN(INITIAL);
+                               *string_buf_ptr = '\0';
+                               return STR_CONST;
+                             }
+<STRING>.                    { }
+
+ /* Default */
 
 {DARROW}            { return DARROW; } /* Multi-char symbols should come first */
 {ASSIGN}            { return ASSIGN; }
