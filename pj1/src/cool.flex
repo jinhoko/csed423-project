@@ -49,17 +49,24 @@ extern YYSTYPE cool_yylval;
 
 /* Regex Abbreviations */
 
-DIGIT          [0-9]
+WHITESPACE     [ \f\t\r\v]+
+NEWLINE        \n
+
+INTEGER        [0-9]+
+TYPEID         [A-Z][a-zA-Z0-9_]*      
+OBJECTID       [a-z][a-zA-Z0-9_]*
+
 
 /* Symbols */
 DARROW         =>
 ASSIGN         <-
 LE             <=
-SINGLE_CHAR    [;:@,.+-*/~<=(){}] /* 16 chars in total */
+SINGLE_CHAR    [;:@,.*/~<=(){}+-]
+  /* 16 single char symbols in total */
 
 /* Keywords ; 19 in total */
 CLASS          (?i:class)
-INHERITS       (?i:else)
+INHERITS       (?i:inherits)
 IF             (?i:if)
 THEN           (?i:then)
 ELSE           (?i:else)
@@ -74,20 +81,18 @@ OF             (?i:of)
 ESAC           (?i:esac)
 NEW            (?i:new)
 NOT            (?i:not)
-ISVOID         (?:isvoid)
-TRUE           true
-FALSE          false
+ISVOID         (?i:isvoid)
+TRUE           t(?i:rue)
+FALSE          f(?i:alse)
 
-
-/* TODO consider unmatched ones */
 
 /* ======================================================================== */
 
-/* Start Conditions */
+/* Conditions */
 
-/* INITIAL */
-%x COMMENT 
-
+/* %x INITIAL */
+%x COMMENT
+%x STRING
 
 /* ======================================================================== */
 %%
@@ -107,13 +112,57 @@ FALSE          false
   *     with the correct line number
   */
 
+ /* COMMENT condition */
+
+ /* STRING condition */
 
 
-{DARROW}            { return DARROW; }
+ /* INITIAL condition */
+
+{DARROW}            { return DARROW; } /* Multi-char symbols should come first */
 {ASSIGN}            { return ASSIGN; }
 {LE}                { return LE; }
 {SINGLE_CHAR}       { return *yytext; }
 
+{CLASS}             { return CLASS; }
+{INHERITS}          { return INHERITS; }
+{IF}                { return IF; }
+{THEN}              { return THEN; }
+{ELSE}              { return ELSE; }
+{FI}                { return FI; }
+{WHILE}             { return WHILE; }
+{LOOP}              { return LOOP; }
+{POOL}              { return POOL; }
+{LET}               { return LET; }
+{IN}                { return IN; }
+{CASE}              { return CASE; }
+{OF}                { return OF; }
+{ESAC}              { return ESAC; }
+{NEW}               { return NEW; }
+{NOT}               { return NOT; }
+{ISVOID}            { return ISVOID; }
 
+{TRUE}              { cool_yylval.boolean = 1;  return BOOL_CONST; }
+{FALSE}             { cool_yylval.boolean = 0; return BOOL_CONST; }
+
+{INTEGER}           { cool_yylval.symbol = inttable.add_string(yytext);
+                      return INT_CONST;
+                    }
+{TYPEID}            { cool_yylval.symbol = stringtable.add_string(yytext);
+                      return TYPEID;
+                    }
+{OBJECTID}          { cool_yylval.symbol = stringtable.add_string(yytext);
+                      return OBJECTID;
+                    }
+
+{WHITESPACE}        { }
+{NEWLINE}           { curr_lineno++; }
+
+
+ /* handle all unmatched cases (to ensure complete lexer) */
+
+.                   { cool_yylval.error_msg = yytext;
+                      return ERROR;
+                    }
 
 %%
