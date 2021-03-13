@@ -164,7 +164,7 @@ FALSE          f(?i:alse)
                                *string_buf_ptr = '\0';
                                return STR_CONST;
                              }
-<STRING>.                    { }
+<STRING>.                    { *string_buf_ptr++ = *yytext;  }
 
  /* Default */
 
