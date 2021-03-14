@@ -1,3 +1,5 @@
+../src/test.cl
+
 ../cool-examples/arith.cl
 ../cool-examples/atoi.cl
 ../cool-examples/atoi_test.cl
@@ -82,3 +84,4 @@
 ../lexer-test/web/wq0607-c4.cool
 
 ../lexer-test/custom/hello_world.cl
+../lexer-test/custom/t1.cl

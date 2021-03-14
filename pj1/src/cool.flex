@@ -43,6 +43,9 @@ extern YYSTYPE cool_yylval;
 /* Custom Definitions */
 
 int comment_level;
+int is_string_invalid;
+int is_string_long;
+int check_length();
 
 %}
 /* ======================================================================== */
@@ -58,17 +61,7 @@ OBJECTID       [a-z][a-zA-Z0-9_]*
 /* Symbols */
 
 WHITESPACE     [ \f\t\r\v]+
-NEWLINE        \n
 
-S_COMMENT      "--"
-M_COMMENT_ST   "(*"
-M_COMMENT_EN   "*)"
-
-STRING         \"
-STR_ESCEXCEPT  [\b\t\n\f]
-STR_INVALID    \0
-STR_NEWLINE    \\
- 
 DARROW         =>
 ASSIGN         <-
 LE             <=
@@ -126,45 +119,72 @@ FALSE          f(?i:alse)
 
  /* Comment */
 
-<INITIAL>{S_COMMENT}          { BEGIN(SINGLECOMMENT); }
-<SINGLECOMMENT>{NEWLINE}      { curr_lineno++; BEGIN(INITIAL); }
+<INITIAL>--                   { BEGIN(SINGLECOMMENT); }
+<SINGLECOMMENT>\n             { curr_lineno++; BEGIN(INITIAL); }
 <SINGLECOMMENT><<EOF>>        { BEGIN(INITIAL);  }
+<SINGLECOMMENT>.              { } 
 
-<INITIAL>{M_COMMENT_ST}       { comment_level = 1; BEGIN(MULTICOMMENT); }
-<INITIAL>{M_COMMENT_EN}       { cool_yylval.error_msg = "Unmatched *)";
-                                BEGIN(INITIAL);
+<INITIAL>"(*"                 { comment_level = 1; BEGIN(MULTICOMMENT); }
+<INITIAL>"*)"                 { cool_yylval.error_msg = "Unmatched *)";
                                 return ERROR;
                               }
-<MULTICOMMENT>{M_COMMENT_ST}  { comment_level++; }
-<MULTICOMMENT>{NEWLINE}       { curr_lineno++; }
+<MULTICOMMENT>"(*"            { comment_level++; }
+<MULTICOMMENT>\n              { curr_lineno++; }
 <MULTICOMMENT><<EOF>>         { cool_yylval.error_msg = "EOF in comment"; 
                                 BEGIN(INITIAL);
                                 return ERROR;
                               }
-<MULTICOMMENT>{M_COMMENT_EN}  { comment_level--;
+<MULTICOMMENT>"*)"            { comment_level--;
                                 if(comment_level==0) BEGIN(INITIAL);  
                               }
+<MULTICOMMENT>.               { }
 
  /* String */
 
-<INITIAL>{STRING}            { string_buf_ptr = string_buf;
+<INITIAL>\"                  { string_buf_ptr = string_buf;
+                               is_string_invalid = 0;
+                               is_string_long = 0;
                                BEGIN(STRING);
                              }
 <STRING><<EOF>>              { cool_yylval.error_msg = "EOF in string constant";
                                BEGIN(INITIAL);
                                return ERROR;
                              }
-<STRING>\\b                  { *string_buf_ptr++ = '\b'; }
-<STRING>\\t                  { *string_buf_ptr++ = '\t'; }
-<STRING>\\n                  { *string_buf_ptr++ = '\n'; }
-<STRING>\\f                  { *string_buf_ptr++ = '\f'; }
-
-<STRING>{STR_NEWLINE}        { curr_lineno++; }
-<STRING>{STRING}             { BEGIN(INITIAL);
-                               *string_buf_ptr = '\0';
-                               return STR_CONST;
+<STRING>\n                   { cool_yylval.error_msg = "Unterminated string constant";
+                               curr_lineno++;
+                               BEGIN(INITIAL);
+                               return ERROR;
                              }
-<STRING>.                    { *string_buf_ptr++ = *yytext;  }
+<STRING>\0                   { is_string_invalid = 1; }
+<STRING>\\\0                 { is_string_invalid = 1; }
+
+<STRING>\\b                  { if(check_length()) *string_buf_ptr++ = '\b'; }
+<STRING>\\t                  { if(check_length()) *string_buf_ptr++ = '\t'; }
+<STRING>\\n                  { if(check_length()) *string_buf_ptr++ = '\n'; }
+<STRING>\\f                  { if(check_length()) *string_buf_ptr++ = '\f'; }
+
+<STRING>\\\n                 { curr_lineno++;
+                               if(check_length()) *string_buf_ptr++ = '\n';
+                             }
+<STRING>\"                   { BEGIN(INITIAL);
+                               if(is_string_invalid == 0) {
+                                 if(is_string_long == 0) {
+                                   *string_buf_ptr = '\0';
+                                   cool_yylval.symbol = stringtable.add_string(string_buf);
+                                   return STR_CONST;
+                                 } else {
+                                   cool_yylval.error_msg = "String constant too long";
+                                   return ERROR;
+                                 } 
+                               } else {
+                                 cool_yylval.error_msg = "String contains invalid character";
+                                 return ERROR;
+                               }
+                             }
+
+<STRING>\\.                  { if(check_length()) *string_buf_ptr++ = *(yytext+1); }
+
+<STRING>.                    { if(check_length()) {*string_buf_ptr++ = *yytext;}  }
 
  /* Default */
 
@@ -205,7 +225,7 @@ FALSE          f(?i:alse)
                     }
 
 {WHITESPACE}        { }
-{NEWLINE}           { curr_lineno++; }
+\n                  { curr_lineno++; }
 
 
  /* handle all unmatched cases (to ensure complete lexer) */
@@ -215,3 +235,11 @@ FALSE          f(?i:alse)
                     }
 
 %%
+
+int check_length() {
+ if( string_buf_ptr - string_buf >= MAX_STR_CONST - 1) {
+   is_string_long = 1;
+   return 0;
+ }
+ return 1;
+}
