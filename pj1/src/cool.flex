@@ -177,7 +177,7 @@ FALSE          f(?i:alse)
                                    return ERROR;
                                  } 
                                } else {
-                                 cool_yylval.error_msg = "String contains invalid character";
+                                 cool_yylval.error_msg = "String contains null character.";
                                  return ERROR;
                                }
                              }
