@@ -10,13 +10,20 @@ echo ""
 red=`tput setaf 1`
 green=`tput setaf 2`
 reset=`tput sgr0`
+verbosity=0
 
 REF_PARSER=$2
 USER_PARSER=$3
 LEXER=$4
+VERBOSE=$5
 
-if [ $# -ne 4 ]; then
+if [ $# -lt '4' ]; then
     echo "Error occured : wrong inputs!"; exit 1;
+fi
+
+if [ $5 == '-v' ]; then
+    ((verbosity=1))
+    echo "Verbose option ON";
 fi
 
 INPUT_FILE=$1
@@ -40,6 +47,10 @@ for input in ${input_list[@]}; do
    ((pass_cnt += 1))
   else
    echo "[${red}FAIL${reset}] $input"
+   if [ $verbosity -eq 1 ]; then
+     echo "${green}$(cat _ref_out)${reset}" | head -n 5 && echo "..."
+     echo "${red}$(cat _user_out)${reset}" | head -n 5 && echo "..."
+   fi
   fi
   rm _ref_out
   rm _user_out
