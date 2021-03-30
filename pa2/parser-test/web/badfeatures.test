@@ -1,7 +1,7 @@
 class A {
   x : int;
   f(x : Int) : Int {
-    5;
+    5
   };
   y : Bool
 };

@@ -1,4 +1,4 @@
-class test {
+class Test {
   foo:Test;
   bar():Int {5};
 };
