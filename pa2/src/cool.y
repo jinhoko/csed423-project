@@ -150,6 +150,9 @@ class_list
                 { $$ = single_Classes($1); }
         | class_list class /* several classes */
                 { $$ = append_Classes($1,single_Classes($2)); }
+        /* error handling */
+        | error ';'                { }
+        | class_list error ';'     { }
         ;
 
 /* If no parent is specified, the class inherits from the Object class. */
@@ -159,19 +162,23 @@ class  : CLASS TYPEID '{' feature_list_optional '}' ';'
         | CLASS TYPEID INHERITS TYPEID '{' feature_list_optional '}' ';'
                 { $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
         /* error handling */
-        | error ';' {}
+        | CLASS TYPEID '{' error ';' {}
+        | CLASS TYPEID INHERITS TYPEID '{' error ';' {}
         ;
 
 /* Feature list may be empty, but no empty features in list. */
 feature_list_optional
         : /* empty */              { $$ = nil_Features(); }
-        | feature_list             { $$ = $1; } 
+        | feature_list             { $$ = $1; }
+        /* error handling */
+        | error                    { }  
+        ; 
 
 feature_list
         : feature ';'              { $$ = single_Features($1); }
         | feature_list feature ';' { $$ = append_Features($1,single_Features($2)); }
         /* error handling */
-        | error ';'                {  }
+        | error ';'                { }
         ;
 
 feature
@@ -182,7 +189,6 @@ feature
         | OBJECTID ':' TYPEID ASSIGN expr
                  { $$ = attr($1,$3,$5); }
         /* error handling */
-        | OBJECTID '(' error ')' ':' error '{' error '}' {}
         ;
 
 formal_list
@@ -195,28 +201,34 @@ formal_list
 formal
         : OBJECTID ':' TYPEID       { $$ = formal($1,$3); }
         /* error handling */
-        | error ',' {}
-        ;
+        | error                     {}
+         ;
 
 expr_list
         : expr ';'                  { $$ = single_Expressions($1); }
         | expr_list expr ';'        { $$ = append_Expressions($1,single_Expressions($2)); }
         /* error handling */
+        | error ';'                 {}
         ;
 
 expr_param_optional
         : /* empty */               { $$ = nil_Expressions(); }
         | expr_param_list           { $$ = $1; }
+        /* error handling */ 
+        | error                     {}
         ;
 
 expr_param_list
         : expr                      { $$ = single_Expressions($1); }
         | expr ',' expr_param_list  { $$ = append_Expressions(single_Expressions($1),$3); }
+        /* error handling */
+        | error ','                 {}
         ;
 
 expr_let_assign
         : ASSIGN expr               { $$ = $2; }
         | /* empty */               { $$ = no_expr(); }
+        /* error handling */
         | error                     { }
         ;
 
@@ -227,9 +239,9 @@ expr_let_list
                   { $$ = let($1,$3,$4,$6); }
         ;
 expr_let
-        : LET expr_let_list  { $$ = $2; }
+        : LET expr_let_list         { $$ = $2; }
         /* error handling */ 
-        | LET error IN       {  }
+        | LET error                 {  }
         ;
 
 expr_while
@@ -240,7 +252,10 @@ expr_while
 expr_if
         : IF expr THEN expr ELSE expr FI       { $$ = cond($2,$4,$6); }
         /* error handling */
-        | IF error THEN expr ELSE expr FI      {}
+        | IF error FI                          {}
+        | IF expr THEN error FI                {}
+        | IF expr THEN expr ELSE error FI      {}
+        | IF error ';' {}
         ;
 
 expr_case
@@ -292,7 +307,7 @@ expr
         | STR_CONST                            { $$ = string_const($1); }
         | BOOL_CONST                           { $$ = bool_const($1); }
         /* error handling */
-        | '{' error '}'                        { }
+        | '{' error  '}'                       { }
         ;
          
 

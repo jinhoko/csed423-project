@@ -28,10 +28,6 @@ Class E inherits A {
 ;
 
 
-Class Wrongname {
- Foo:Int; bar:Int;
-};
-
 Class Wrongblock {
   f():Type{       {{{{ (1+1 - ~5);};};};{1;};   };
 };
