@@ -36,7 +36,7 @@ class A {
             x <- ~num;
 	    (new C).set_var(x);
 	 }
-      )
+      ) 
    };
 
    method4(num1 : Int, num2 : Int) : D {  -- diff

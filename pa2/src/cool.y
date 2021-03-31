@@ -9,14 +9,16 @@
 #include "stringtab.h"
 #include "utilities.h"
 
+extern int curr_lineno;
 /* Add your own C declarations here */
+
 
 
 /************************************************************************/
 /*                DONT CHANGE ANYTHING IN THIS SECTION                  */
 
 extern int yylex();           /* the entry point to the lexer  */
-extern int curr_lineno;
+//extern int curr_lineno;
 extern char *curr_filename;
 Program ast_root;            /* the result of the parse  */
 Classes parse_results;       /* for use in semantic analysis */
@@ -111,6 +113,7 @@ extern int VERBOSE_ERRORS;
 
 %type <expression> expr_let
 %type <expression> expr_let_list
+%type <expression> expr_let_assign
 %type <expression> expr 
 %type <expression> expr_dispatch
 %type <expression> expr_while
@@ -180,7 +183,6 @@ feature
                  { $$ = attr($1,$3,$5); }
         /* error handling */
         | OBJECTID '(' error ')' ':' error '{' error '}' {}
-        | error ';' {}
         ;
 
 formal_list
@@ -212,20 +214,22 @@ expr_param_list
         | expr ',' expr_param_list  { $$ = append_Expressions(single_Expressions($1),$3); }
         ;
 
+expr_let_assign
+        : ASSIGN expr               { $$ = $2; }
+        | /* empty */               { $$ = no_expr(); }
+        | error                     { }
+        ;
+
 expr_let_list
-        : OBJECTID ':' TYPEID IN expr %prec LET_PREC
-                  { $$ = let($1,$3,no_expr(),$5); }
-        | OBJECTID ':' TYPEID ASSIGN expr IN expr %prec LET_PREC
-                  { $$ = let($1,$3,$5,$7); }
-        | OBJECTID ':' TYPEID ',' expr_let_list       
-                  { $$ = let($1,$3,no_expr(),$5); }
-        | OBJECTID ':' TYPEID ASSIGN expr ',' expr_let_list 
-                  { $$ = let($1,$3,$5,$7); }
+        : OBJECTID ':' TYPEID expr_let_assign IN expr %prec LET_PREC
+                  { $$ = let($1,$3,$4,$6); @$ = @1; }
+        | OBJECTID ':' TYPEID expr_let_assign',' expr_let_list       
+                  { $$ = let($1,$3,$4,$6); }
         ;
 expr_let
         : LET expr_let_list  { $$ = $2; }
         /* error handling */ 
-        | LET error IN   {  }
+        | LET error IN       {  }
         ;
 
 expr_while
@@ -236,7 +240,7 @@ expr_while
 expr_if
         : IF expr THEN expr ELSE expr FI       { $$ = cond($2,$4,$6); }
         /* error handling */
-        | IF error FI {}
+        | IF error THEN expr ELSE expr FI      {}
         ;
 
 expr_case
@@ -289,7 +293,6 @@ expr
         | BOOL_CONST                           { $$ = bool_const($1); }
         /* error handling */
         | '{' error '}'                        { }
-        | error                                { }
         ;
          
 
