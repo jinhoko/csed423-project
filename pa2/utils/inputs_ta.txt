@@ -12,4 +12,8 @@
 ../parser-test/custom/returntypebad.cl
 ../parser-test/custom/unaryassociativity.cl
 ../parser-test/custom/while.cl
+../parser-test/custom/baddispatch4.test
+../parser-test/custom/badfeatures.test
+../parser-test/custom/parseerr04.test
+../parser-test/custom/parsetest04.test
 

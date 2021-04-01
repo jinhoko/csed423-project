@@ -163,8 +163,9 @@ class  : CLASS TYPEID '{' feature_list_optional '}' ';'
         | CLASS TYPEID INHERITS TYPEID '{' feature_list_optional '}' ';'
                 { $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
         /* error handling */
-        | CLASS TYPEID '{' error ';' {}
-        | CLASS TYPEID INHERITS TYPEID '{' error ';' {}
+        | CLASS TYPEID '{' error  ';' { yyerrok; }
+        | CLASS TYPEID INHERITS TYPEID '{' error ';' { yyerrok; }
+        | CLASS TYPEID error '{' feature_list '}' ';' {yyerrok; }
         ;
 
 /* Feature list may be empty, but no empty features in list. */
@@ -179,7 +180,8 @@ feature_list
         : feature ';'              { $$ = single_Features($1); }
         | feature_list feature ';' { $$ = append_Features($1,single_Features($2)); }
         /* error handling */
-        | error ';'                { }
+        | error ';'                { yyerrok; }
+        | feature_list feature error    { yyerrok; }
         ;
 
 feature
@@ -190,6 +192,8 @@ feature
         | OBJECTID ':' TYPEID ASSIGN expr
                  { $$ = attr($1,$3,$5); }
         /* error handling */
+        | OBJECTID '(' formal_list ')' ':' TYPEID '{' error '}'
+                 { }
         ;
 
 formal_list
@@ -222,7 +226,8 @@ expr_param_list
         : expr                      { $$ = single_Expressions($1); }
         | expr_param_list ',' expr  { $$ = append_Expressions($1,single_Expressions($3)); }
         /* error handling */
-        | error                     {}
+        | error                     { yyerrok; }
+        | error ';' expr            { yyclearin; }
         ;
 
 expr_let_assign
@@ -237,6 +242,7 @@ expr_let_list
                   { $$ = let($1,$3,$4,$6); @$ = @1; }
         | OBJECTID ':' TYPEID expr_let_assign',' expr_let_list       
                   { $$ = let($1,$3,$4,$6); }
+        /* error handling */
         ;
 expr_let
         : LET expr_let_list                    { $$ = $2; }
@@ -275,6 +281,8 @@ expr_dispatch
         | expr '@' TYPEID '.' OBJECTID '(' expr_param_optional ')'
                   { $$ = static_dispatch($1,$3,$5,$7); }
         /* error handling */
+        | OBJECTID '(' error ')' {  }
+        | OBJECTID '(' error ';' ')' {  }
         ;
 
 branch_list
