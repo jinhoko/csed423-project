@@ -117,6 +117,7 @@ extern int VERBOSE_ERRORS;
 %type <expression> expr 
 %type <expression> expr_dispatch
 %type <expression> expr_while
+%type <expression> expr_while_inner
 %type <expression> expr_if
 %type <expression> expr_case
 
@@ -202,7 +203,7 @@ formal
         : OBJECTID ':' TYPEID       { $$ = formal($1,$3); }
         /* error handling */
         | error                     {}
-         ;
+        ;
 
 expr_list
         : expr ';'                  { $$ = single_Expressions($1); }
@@ -212,17 +213,16 @@ expr_list
         ;
 
 expr_param_optional
-        : /* empty */               { $$ = nil_Expressions(); }
-        | expr_param_list           { $$ = $1; }
-        /* error handling */ 
-        | error                     {}
+        : expr_param_list           { $$ = $1; }
+        | /* empty */               { $$ = nil_Expressions(); }
+        /* error handling */
         ;
 
 expr_param_list
         : expr                      { $$ = single_Expressions($1); }
-        | expr ',' expr_param_list  { $$ = append_Expressions(single_Expressions($1),$3); }
+        | expr_param_list ',' expr  { $$ = append_Expressions($1,single_Expressions($3)); }
         /* error handling */
-        | error ','                 {}
+        | error                     {}
         ;
 
 expr_let_assign
@@ -239,13 +239,18 @@ expr_let_list
                   { $$ = let($1,$3,$4,$6); }
         ;
 expr_let
-        : LET expr_let_list         { $$ = $2; }
+        : LET expr_let_list                    { $$ = $2; }
         /* error handling */ 
-        | LET error                 {  }
+        | LET error                            {  }
         ;
 
+expr_while_inner
+        : LOOP expr POOL                       { $$ = $2; }
+        /* error handling */
+        | POOL error                           { }
+
 expr_while
-        : WHILE expr LOOP expr POOL            { $$ = loop($2,$4); }
+        : WHILE expr expr_while_inner          { $$ = loop($2,$3); }
         /* error handling */
         ;
 

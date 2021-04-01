@@ -1,0 +1,15 @@
+../parser-test/custom/arithprecedence.cl
+../parser-test/custom/atoi.cl
+../parser-test/custom/badfeaturenames.cl
+../parser-test/custom/casemultiplebranch.cl
+../parser-test/custom/classbadinherits.cl
+../parser-test/custom/comparisons-assoc.cl
+../parser-test/custom/ifnested.cl
+../parser-test/custom/ifnoelse.cl
+../parser-test/custom/multipleattributes.cl
+../parser-test/custom/multipleclasses.cl
+../parser-test/custom/multipledispatches.cl
+../parser-test/custom/returntypebad.cl
+../parser-test/custom/unaryassociativity.cl
+../parser-test/custom/while.cl
+
