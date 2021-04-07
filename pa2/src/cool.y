@@ -153,7 +153,7 @@ class_list
                 { $$ = append_Classes($1,single_Classes($2)); }
         /* error handling */
         | error ';'                { }
-        | class_list error ';'     { }
+        | class_list error ';'     {  }
         ;
 
 /* If no parent is specified, the class inherits from the Object class. */
@@ -163,9 +163,7 @@ class  : CLASS TYPEID '{' feature_list_optional '}' ';'
         | CLASS TYPEID INHERITS TYPEID '{' feature_list_optional '}' ';'
                 { $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
         /* error handling */
-        | CLASS TYPEID '{' error  ';' { yyerrok; }
-        | CLASS TYPEID INHERITS TYPEID '{' error ';' { yyerrok; }
-        | CLASS TYPEID error '{' feature_list '}' ';' {yyerrok; }
+        | CLASS TYPEID error '{' feature_list '}' ';' { yyerrok; }
         ;
 
 /* Feature list may be empty, but no empty features in list. */
@@ -174,14 +172,18 @@ feature_list_optional
         | feature_list             { $$ = $1; }
         /* error handling */
         | error                    { }  
+        | feature_list error       { yyerrok; }
         ; 
 
 feature_list
         : feature ';'              { $$ = single_Features($1); }
         | feature_list feature ';' { $$ = append_Features($1,single_Features($2)); }
         /* error handling */
-        | error ';'                { yyerrok; }
-        | feature_list feature error    { yyerrok; }
+        | error ';'                           { yyerrok; }
+        | feature error ';'                   { yyerrok; }
+        | feature_list feature error ';'      { yyerrok; }
+        | feature_list feature error '}' ';'  {  }
+        | feature error '}' ';'               {  }
         ;
 
 feature
@@ -258,6 +260,7 @@ expr_while_inner
 expr_while
         : WHILE expr expr_while_inner          { $$ = loop($2,$3); }
         /* error handling */
+        | WHILE error                          { }
         ;
 
 expr_if
@@ -266,11 +269,13 @@ expr_if
         | IF error FI                          {}
         | IF expr THEN error FI                {}
         | IF expr THEN expr ELSE error FI      {}
-        | IF error ';' {}
+        | IF error ';'                         {}
         ;
 
 expr_case
         : CASE expr OF branch_list ESAC        { $$ = typcase($2,$4); }
+        /* error handling */
+        | CASE error OF branch_list ESAC       { }
         ;
 
 expr_dispatch
@@ -281,8 +286,6 @@ expr_dispatch
         | expr '@' TYPEID '.' OBJECTID '(' expr_param_optional ')'
                   { $$ = static_dispatch($1,$3,$5,$7); }
         /* error handling */
-        | OBJECTID '(' error ')' {  }
-        | OBJECTID '(' error ';' ')' {  }
         ;
 
 branch_list
