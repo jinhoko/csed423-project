@@ -1,0 +1,6 @@
+*.cc
+*.o
+*.output
+*.tab.h
+lexer
+parser

@@ -1,0 +1,2 @@
+../src/test_good.cl
+../src/test_bad.cl

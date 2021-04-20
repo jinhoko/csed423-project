@@ -1,0 +1,5 @@
+Use example :
+
+> compare-parser.sh INPUT_FILE_PATH REF_PARSER_PATH USER_PARSER_PATH LEXER
+
+INPUT_FILE should be line-sepearted filenames with relative path starting from the script execution point
