@@ -12,6 +12,9 @@
 #include "tree.h"
 #include "cool-tree.handcode.h"
 
+#include "semant.h"
+
+
 
 // define the class for phylum
 // define simple phylum - Program
@@ -21,6 +24,8 @@ class Program_class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Program(); }
    virtual Program copy_Program() = 0;
+
+
 
 #ifdef Program_EXTRAS
    Program_EXTRAS
@@ -135,6 +140,8 @@ public:
    }
    Program copy_Program();
    void dump(ostream& stream, int n);
+   /* custom defn */
+
 
 #ifdef Program_SHARED_EXTRAS
    Program_SHARED_EXTRAS

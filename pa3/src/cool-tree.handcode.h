@@ -44,6 +44,8 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
+
+
 #define Program_EXTRAS                          \
 virtual void semant() = 0;			\
 virtual void dump_with_types(ostream&, int) = 0; 
@@ -56,11 +58,15 @@ void dump_with_types(ostream&, int);
 
 #define Class__EXTRAS                   \
 virtual Symbol get_filename() = 0;      \
+virtual Symbol get_name() = 0;  	\
+virtual Symbol get_parent() = 0;    	\
 virtual void dump_with_types(ostream&,int) = 0; 
 
 
 #define class__EXTRAS                                 \
-Symbol get_filename() { return filename; }             \
+Symbol get_filename();        \
+Symbol get_name();		       \
+Symbol get_parent();   	       \
 void dump_with_types(ostream&,int);                    
 
 
