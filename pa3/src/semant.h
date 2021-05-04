@@ -61,7 +61,7 @@ public:
   void check_name_scope();
 
   // check types
-  
+  void check_types();
 
   // all error functions
   void printerr_prevdef( Class_ c1, Symbol c2 );

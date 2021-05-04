@@ -444,6 +444,10 @@ void ClassTable::check_name_scope() {
 
 }
 
+void ClassTable::check_types() {
+    
+}
+
 void ClassTable::check_entrypoint() {
 
     bool isMainClassExists = true; // TODO change condition
@@ -503,13 +507,13 @@ void program_class::semant()
     // Check program entrypoint
     classtable->check_entrypoint();
 
-    // Fill symbol table
+    // TODO Fill symbol table 
 
     // Scopechecking
     classtable->check_name_scope();
     
     // Typechecking
-
+    classtable->check_types();
 
     // Return & Terminate
     halt_if_error(classtable);
