@@ -20,6 +20,7 @@ typedef ClassTable *ClassTableP;
 // methods.
 
 typedef int nodeIdx;
+using namespace cool;
 
 class ClassTable {
 private:
@@ -36,19 +37,31 @@ public:
 
   /* custom */
   Classes user_classes;       // all list of classes during sement execution
-  Classes language_classes;   // language_defined classes
+  Classes base_classes;   // language_defined classes
   Classes program_classes;    // user_classes + language_classes
   
-  // inheritance
-  void check_inheritance();
-  void is_inheritance_graph_cyclic();
+  // check inheritance
   nodeIdx latestNodeIdx;
+  SymbolTable<Symbol, Class__class> *valid_scope_symbols;
+  SymbolTable<Symbol, Class__class> *invalid_inheritance_symbols;
+  SymbolTable<Symbol, nodeIdx> *graph_nodes;
+  SymbolTable<nodeIdx, nodeIdx> *graph_edges;
+
+  void check_graph_node_build();
+  void check_graph_edge_build();
+  void check_inheritance_cycle();
+
   nodeIdx* get_new_nodeindex();
   int num_nodes();
 
-  // entrypoint
+  // check entrypoint
   void check_entrypoint();
 
+  // check name_scope
+  void check_name_scope();
+
+  // check types
+  
 
   // all error functions
   void printerr_prevdef( Class_ c1, Symbol c2 );

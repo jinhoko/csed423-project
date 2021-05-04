@@ -1,0 +1,6 @@
+../semant-test/mine/t1.cl
+../semant-test/mine/t2.cl
+../semant-test/mine/t3.cl
+../semant-test/mine/t4.cl
+../semant-test/mine/t5.cl
+

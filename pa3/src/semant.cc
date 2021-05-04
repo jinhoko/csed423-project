@@ -90,18 +90,6 @@ static void initialize_constants(void)
 }
 
 
-
-ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) {
-
-    // Install basic classes to language_classes
-    install_basic_classes();
-    // Install user_classes
-    user_classes = classes;
-    
-    // Initialize others
-    latestNodeIdx = 0;
-}
-
 void ClassTable::install_basic_classes() {
 
     // The tree package uses these globals to annotate the classes built below.
@@ -202,7 +190,7 @@ void ClassTable::install_basic_classes() {
 						      no_expr()))),
 	       filename);
 
-    language_classes =
+    base_classes =
         append_Classes(
             append_Classes(
                 append_Classes(
@@ -280,36 +268,26 @@ void ClassTable::printerr_cyclefound( Class_ c1, Symbol c2) {
 //
 ///////////////////////////////////////////////////////////////////
 
+ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) {
 
-nodeIdx* ClassTable::get_new_nodeindex() {
-    return new nodeIdx(++latestNodeIdx); // generate index object every time
-}
-int ClassTable::num_nodes() { return latestNodeIdx; }
-
-void ClassTable::check_inheritance() {
-
-    // Checks following in first pass: 
-    //   1. no duplicated definition of user class
-    //   2. not redefinition of base classes
-    //   3. user class not inheriting from base class
-    //   => build nodes of inheritance graph
-    //  
-    // Checks following in second pass: 
-    //   1. check dangling classes
-    //   => build edges of inheritance graph
-    //
-    // Check if graph is acyclic
+    // Install basic classes to language_classes
+    install_basic_classes();
+    // Install user_classes
+    user_classes = classes;
+    
+    // Initialize others
+    latestNodeIdx = 0;
 
     // table for duplicate check
-    SymbolTable<Symbol, Class__class> *valid_scope_symbols = new SymbolTable<Symbol, Class__class>();
+    valid_scope_symbols = new SymbolTable<Symbol, Class__class>();
     valid_scope_symbols->enterscope();
 
     // table for invalid inheritance
-    SymbolTable<Symbol, Class__class> *invalid_inheritance_symbols = new SymbolTable<Symbol, Class__class>();
+    invalid_inheritance_symbols = new SymbolTable<Symbol, Class__class>();
     invalid_inheritance_symbols->enterscope();
 
     // tables for inheritance graph (maintain inverted table as well; for printing error )
-    SymbolTable<Symbol, nodeIdx> *graph_nodes = new SymbolTable<Symbol, nodeIdx>();
+    graph_nodes = new SymbolTable<Symbol, nodeIdx>();
     graph_nodes->enterscope();
     nodeIdx *_tmp;
     graph_nodes->addid( Object,  get_new_nodeindex() ); 
@@ -319,9 +297,23 @@ void ClassTable::check_inheritance() {
     graph_nodes->addid( Bool,  get_new_nodeindex() );
     graph_nodes->addid( Str,  get_new_nodeindex() );
     
-    SymbolTable<nodeIdx, nodeIdx> *graph_edges = new SymbolTable<nodeIdx, nodeIdx>();
+    graph_edges = new SymbolTable<nodeIdx, nodeIdx>();
     graph_edges->enterscope();
 
+}
+
+nodeIdx* ClassTable::get_new_nodeindex() {
+    return new nodeIdx(++latestNodeIdx); // generate index object every time
+}
+int ClassTable::num_nodes() { return latestNodeIdx; }
+
+void ClassTable::check_graph_node_build() {
+
+    // Checks following in first pass: 
+    //   1. no duplicated definition of user class
+    //   2. not redefinition of base classes
+    //   3. user class not inheriting from base class
+    //   => build nodes of inheritance graph
 
     // first pass
     int idx;
@@ -344,7 +336,7 @@ void ClassTable::check_inheritance() {
             valid_scope_symbols->lookup(_class_name) != NULL;
         isRedefiningReserved = 
             _class_name == Object || _class_name == No_class || _class_name == SELF_TYPE ||
-            _class_name == Int || _class_name == Bool || _class_name == Str;
+            _class_name == Int || _class_name == Bool || _class_name == Str || _class_name == IO;
         isInheritingFromBaseClasses =
             _class_parent == Int || _class_parent == Bool || _class_parent == Str || _class_parent == SELF_TYPE;
         
@@ -352,6 +344,7 @@ void ClassTable::check_inheritance() {
             printerr_prevdef( _class, _class_name );
         } else if ( isRedefiningReserved ) {
             printerr_redefine_reserved( _class, _class_name );
+            invalid_inheritance_symbols->addid(_class_name, _class);
         } else if ( isInheritingFromBaseClasses ) {
             printerr_inherit_base( _class, _class_name, _class_parent );
             valid_scope_symbols->addid(_class_name, _class);
@@ -363,7 +356,21 @@ void ClassTable::check_inheritance() {
         }
     }
     
+
+} 
+
+void ClassTable::check_graph_edge_build() {
+
+    // Checks following in second pass: 
+    //   1. check dangling classes
+    //   => build edges of inheritance graph
+    //
+
     // second pass
+    int idx;
+    Class_ _class;
+    Symbol _class_name, _class_parent;
+
     bool isClassDangling;
     bool isNodeWithInvalidInheritance;
     nodeIdx *parent_idx, *child_idx;
@@ -380,23 +387,30 @@ void ClassTable::check_inheritance() {
         
         isNodeWithInvalidInheritance = 
             invalid_inheritance_symbols->lookup( _class_name ) != NULL;
-        
+        if( isNodeWithInvalidInheritance ) { continue; }
+    
         if( isClassDangling ) {
             printerr_isdangling( _class, _class_name, _class_parent );
         } else { // ok
             child_idx = graph_nodes->lookup( _class_name );
             parent_idx = graph_nodes->lookup( _class_parent );
-            if( ! isNodeWithInvalidInheritance ) {
-                graph_edges->addid( *child_idx , parent_idx );
-            }
+            graph_edges->addid( *child_idx , parent_idx );
         }
-        
     }
+
+}
+
+void ClassTable::check_inheritance_cycle() {
 
     // check cycles
     // (since each node has one outgoing edge, deploy naive algorithm.)
-    nodeIdx *startIdx;
+
+    int idx;
+    Class_ _class;
+    Symbol _class_name, _class_parent;
+    nodeIdx *startIdx, *parent_idx;
     nodeIdx currIdx, parentIdx;
+
     for( idx = user_classes->first();
         user_classes->more(idx);
         idx = user_classes->next(idx) ) {
@@ -422,8 +436,13 @@ void ClassTable::check_inheritance() {
             currIdx = parentIdx;
         } while(1);
     }
-} 
 
+}
+
+void ClassTable::check_name_scope() {
+
+
+}
 
 void ClassTable::check_entrypoint() {
 
@@ -468,7 +487,10 @@ void program_class::semant()
     // Generate classtable by constructor call
     ClassTable *classtable = new ClassTable(classes);
     // Build inheritance graph & Check inheritance validity
-    classtable->check_inheritance();
+    classtable->check_graph_node_build();
+    classtable->check_graph_edge_build();
+    halt_if_error(classtable);
+    classtable->check_inheritance_cycle();
     halt_if_error(classtable);
 
     // ===================
@@ -477,14 +499,14 @@ void program_class::semant()
 
     // After inheritance graph is checked, merge user_classes and language_classes
     classtable->program_classes = 
-        append_Classes( classtable->language_classes, classtable->user_classes );
+        append_Classes( classtable->base_classes, classtable->user_classes );
     // Check program entrypoint
     classtable->check_entrypoint();
 
     // Fill symbol table
-    
-    
+
     // Scopechecking
+    classtable->check_name_scope();
     
     // Typechecking
 
