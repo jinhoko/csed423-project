@@ -257,9 +257,15 @@ void ClassTable::printerr_inherit_base( Class_ c1, Symbol c2, Symbol c3) {
 }
 void ClassTable::printerr_isdangling( Class_ c1, Symbol c2, Symbol c3 ) {
     semant_error( c1 ) << "Class " << c2->get_string() <<  " inherits from an undefined class " << c3->get_string() <<  ".\n";
-};
+}
 void ClassTable::printerr_cyclefound( Class_ c1, Symbol c2) {
     semant_error( c1 ) << "Class " << c2->get_string() << ", or an ancestor of " << c2->get_string() << ", is involved in an inheritance cycle.\n";
+}
+void ClassTable::printerr_main_method_not_exists( Class_ c1 ) {
+    semant_error( c1 ) << "No 'main' method in class Main.\n";
+}
+void ClassTable::printerr_main_class_not_exists() {
+    semant_error( ) << "Class Main is not defined.\n";
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -276,14 +282,17 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
     user_classes = classes;
     
     // Initialize others
-    latestNodeIdx = 0;
+    _latestNodeIdx = 0;
+    _garbageData = 1;
+    _garbage = &_garbageData;
+    assert( _garbageData != 0 ); // prevent NULL overlap
 
     // table for duplicate check
-    valid_scope_symbols = new SymbolTable<Symbol, Class__class>();
+    valid_scope_symbols = new SymbolTable<Symbol, noData>();
     valid_scope_symbols->enterscope();
 
     // table for invalid inheritance
-    invalid_inheritance_symbols = new SymbolTable<Symbol, Class__class>();
+    invalid_inheritance_symbols = new SymbolTable<Symbol, noData>();
     invalid_inheritance_symbols->enterscope();
 
     // tables for inheritance graph (maintain inverted table as well; for printing error )
@@ -303,9 +312,9 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
 }
 
 nodeIdx* ClassTable::get_new_nodeindex() {
-    return new nodeIdx(++latestNodeIdx); // generate index object every time
+    return new nodeIdx(++_latestNodeIdx); // generate index object every time
 }
-int ClassTable::num_nodes() { return latestNodeIdx; }
+int ClassTable::num_nodes() { return _latestNodeIdx; }
 
 void ClassTable::check_graph_node_build() {
 
@@ -344,14 +353,14 @@ void ClassTable::check_graph_node_build() {
             printerr_prevdef( _class, _class_name );
         } else if ( isRedefiningReserved ) {
             printerr_redefine_reserved( _class, _class_name );
-            invalid_inheritance_symbols->addid(_class_name, _class);
+            invalid_inheritance_symbols->addid(_class_name, _garbage );
         } else if ( isInheritingFromBaseClasses ) {
             printerr_inherit_base( _class, _class_name, _class_parent );
-            valid_scope_symbols->addid(_class_name, _class);
-            invalid_inheritance_symbols->addid(_class_name, _class);
+            valid_scope_symbols->addid(_class_name, _garbage );
+            invalid_inheritance_symbols->addid(_class_name, _garbage );
             graph_nodes->addid( _class_name, get_new_nodeindex() );
         } else { // ok
-            valid_scope_symbols->addid(_class_name, _class);
+            valid_scope_symbols->addid(_class_name, _garbage );
             graph_nodes->addid( _class_name, get_new_nodeindex() );
         }
     }
@@ -382,13 +391,13 @@ void ClassTable::check_graph_edge_build() {
         _class_name = _class->get_name();
         _class_parent = _class->get_parent();
 
-        isClassDangling =
-            graph_nodes->lookup( _class_parent ) == NULL;
-        
         isNodeWithInvalidInheritance = 
             invalid_inheritance_symbols->lookup( _class_name ) != NULL;
         if( isNodeWithInvalidInheritance ) { continue; }
-    
+
+        isClassDangling =
+            graph_nodes->lookup( _class_parent ) == NULL;
+        
         if( isClassDangling ) {
             printerr_isdangling( _class, _class_name, _class_parent );
         } else { // ok
@@ -439,7 +448,20 @@ void ClassTable::check_inheritance_cycle() {
 
 }
 
+void ClassTable::fill_symbol_table() {
+
+    // imput : O M C, bool reporterr
+
+}
+
 void ClassTable::check_name_scope() {
+
+    // 
+
+    // foreach class in ordered classes, 
+        // recursively traverse parent / if parent traverse, do not omit error
+        // add new scope
+        // add mine
 
 
 }
@@ -453,7 +475,7 @@ void ClassTable::check_entrypoint() {
     bool isMainClassExists = true; // TODO change condition
     bool isMainMethodDefined = true;
     if( ! isMainClassExists ) {
-        semant_error() << "Class Main is not defined.\n";
+        printerr_main_class_not_exists();
     } else {
         // TODO if Main defined, check if main defined
     }

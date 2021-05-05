@@ -20,6 +20,10 @@ typedef ClassTable *ClassTableP;
 // methods.
 
 typedef int nodeIdx;
+typedef int noData;
+
+// TODO typedef Environment 
+
 using namespace cool;
 
 class ClassTable {
@@ -37,13 +41,15 @@ public:
 
   /* custom */
   Classes user_classes;       // all list of classes during sement execution
-  Classes base_classes;   // language_defined classes
+  Classes base_classes;       // language_defined classes
   Classes program_classes;    // user_classes + language_classes
   
   // check inheritance
-  nodeIdx latestNodeIdx;
-  SymbolTable<Symbol, Class__class> *valid_scope_symbols;
-  SymbolTable<Symbol, Class__class> *invalid_inheritance_symbols;
+  nodeIdx _latestNodeIdx;
+  noData _garbageData;         // for symtable use without data
+  noData* _garbage;
+  SymbolTable<Symbol, noData> *valid_scope_symbols;
+  SymbolTable<Symbol, noData> *invalid_inheritance_symbols;
   SymbolTable<Symbol, nodeIdx> *graph_nodes;
   SymbolTable<nodeIdx, nodeIdx> *graph_edges;
 
@@ -61,6 +67,9 @@ public:
   void check_name_scope();
 
   // check types
+
+
+
   void check_types();
 
   // all error functions
@@ -69,6 +78,9 @@ public:
   void printerr_inherit_base( Class_ c1, Symbol c2, Symbol c3);
   void printerr_isdangling( Class_ c1, Symbol c2, Symbol c3 );
   void printerr_cyclefound( Class_ c1, Symbol c2);
+
+  void printerr_main_method_not_exists( Class_ c1 );
+  void printerr_main_class_not_exists( );
 
 };
 

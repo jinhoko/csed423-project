@@ -3,4 +3,7 @@
 ../semant-test/mine/t3.cl
 ../semant-test/mine/t4.cl
 ../semant-test/mine/t5.cl
+../semant-test/mine/t6.cl
+../semant-test/mine/t7.cl
+../semant-test/mine/t8.cl
 

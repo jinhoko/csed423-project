@@ -1,0 +1,1 @@
+../ref-lexer/lexer ./foo.cl | ../ref-parser/parser | ../ref-semant/semant
