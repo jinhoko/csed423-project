@@ -15,7 +15,6 @@
 #include "semant.h"
 
 
-
 // define the class for phylum
 // define simple phylum - Program
 typedef class Program_class *Program;
@@ -31,7 +30,6 @@ public:
    Program_EXTRAS
 #endif
 };
-
 
 // define simple phylum - Class_
 typedef class Class__class *Class_;
@@ -179,6 +177,7 @@ public:
 
 
 // define constructor - method
+typedef class Method_class *Method;
 class method_class : public Feature_class {
 protected:
    Symbol name;

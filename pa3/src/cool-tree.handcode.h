@@ -11,6 +11,7 @@
 #define yylineno curr_lineno;
 extern int yylineno;
 
+
 inline Boolean copy_Boolean(Boolean b) {return b; }
 inline void assert_Boolean(Boolean) {}
 inline void dump_Boolean(ostream& stream, int padding, Boolean b)
@@ -44,8 +45,6 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
-
-
 #define Program_EXTRAS                          \
 virtual void semant() = 0;			\
 virtual void dump_with_types(ostream&, int) = 0; 
@@ -60,6 +59,7 @@ void dump_with_types(ostream&, int);
 virtual Symbol get_filename() = 0;      \
 virtual Symbol get_name() = 0;  	\
 virtual Symbol get_parent() = 0;    	\
+virtual Features get_features() = 0;	\
 virtual void dump_with_types(ostream&,int) = 0; 
 
 
@@ -67,26 +67,45 @@ virtual void dump_with_types(ostream&,int) = 0;
 Symbol get_filename();        \
 Symbol get_name();		       \
 Symbol get_parent();   	       \
+Features get_features();	\
 void dump_with_types(ostream&,int);                    
 
 
 #define Feature_EXTRAS                                        \
-virtual void dump_with_types(ostream&,int) = 0; 
+virtual Symbol get_name() = 0;		       \
+virtual Symbol get_type() = 0; \
+virtual void dump_with_types(ostream&,int) = 0; \
+virtual void check_feature_name_type( Class_ c, Symbol target) = 0; \
+virtual void check_feature_duplicate(Class_ c, Symbol target ) = 0; \
+virtual void check_feature_method_formals( Class_ c, Symbol target  ) = 0; \
+virtual void check_feature_inheritance( Class_ c, Symbol target ) = 0; \
+virtual void add_feature( Symbol s  ) = 0; \
+virtual Formals get_formals() = 0;
 
 
 #define Feature_SHARED_EXTRAS                                       \
-void dump_with_types(ostream&,int);    
+Symbol get_name(); \
+Symbol get_type(); \
+void dump_with_types(ostream&,int);    \
+void check_feature_name_type( Class_ c, Symbol target ); \
+void check_feature_duplicate( Class_ c, Symbol target ); \
+void check_feature_method_formals( Class_ c, Symbol target ); \
+void check_feature_inheritance( Class_ c, Symbol target  ); \
+void add_feature( Symbol s  ); \
+Formals get_formals();
 
-
+#define method_EXTRAS
 
 
 
 #define Formal_EXTRAS                              \
-virtual void dump_with_types(ostream&,int) = 0;
+virtual void dump_with_types(ostream&,int) = 0; \
+virtual Symbol get_type() = 0; \
 
 
 #define formal_EXTRAS                           \
-void dump_with_types(ostream&,int);
+void dump_with_types(ostream&,int); \
+Symbol get_type();
 
 
 #define Case_EXTRAS                             \

@@ -13,10 +13,7 @@ extern char *curr_filename;
 
 using namespace cool;
 
-// finish definition of methods declared in cool-tree.handcode.h
-Symbol class__class::get_filename() { return filename; }
-Symbol class__class::get_name() { return name; }
-Symbol class__class::get_parent() { return parent; }
+ClassTable* CT;
 
 //////////////////////////////////////////////////////////////////////
 //
@@ -89,6 +86,93 @@ static void initialize_constants(void)
     val         = idtable.add_string("_val");
 }
 
+// finish definition of methods declared in cool-tree.handcode.h
+Symbol class__class::get_filename() { return filename; }
+Symbol class__class::get_name() { return name; }
+Symbol class__class::get_parent() { return parent; }
+Features class__class::get_features() { return features; }
+
+
+Symbol attr_class::get_name() { return name; }
+Symbol method_class::get_name() { return name; }
+Symbol attr_class::get_type() { return type_decl; }
+Symbol method_class::get_type() { return return_type; }
+Formals method_class::get_formals() { return formals; }
+Formals attr_class::get_formals() { return NULL; }
+Symbol formal_class::get_type() { return type_decl; }
+
+void attr_class::add_feature( Symbol c ) { CT->environment[c]->add_attr(get_name(), this->type_decl); }
+void method_class::add_feature( Symbol c ) { CT->environment[c]->add_method(get_name(), this); }
+
+void attr_class::check_feature_name_type( Class_ c, Symbol target ) { 
+    bool isAttrNameSelf = name == self;
+    bool isAttrTypeDefined = CT->is_class_exists_in_program( type_decl ) || type_decl == prim_slot;
+
+    if( isAttrNameSelf ) { CT->printerr_attr_name_self( c, this, target ); }
+    if( !isAttrTypeDefined ) { CT->printerr_attr_type_undefined( c, this, type_decl, name,  target ); }
+}
+void attr_class::check_feature_duplicate(  Class_ c, Symbol target  ) {
+    bool isAttrDuplicated = CT->environment[ c->get_name() ]->ot->probe( name ) != NULL;
+    if( isAttrDuplicated ) { CT->printerr_attr_multiple_defined( c, this, name, target ); }
+}
+void attr_class::check_feature_method_formals( Class_ c, Symbol target  ) { return; }
+void attr_class::check_feature_inheritance( Class_ c, Symbol target ) {
+
+    bool isAttrDefinedInParent = CT->environment[ c->get_name() ]->ot->lookup( name ) != NULL;
+    if( isAttrDefinedInParent ) { CT->printerr_attr_in_inherited_class( c, this, name, target ); }
+}
+
+void method_class::check_feature_name_type( Class_ c, Symbol target ) {
+    bool isMethodTypeDefined = CT->is_class_exists_in_program( return_type ) || return_type == SELF_TYPE;
+    if( !isMethodTypeDefined ) { CT->printerr_method_type_undefined( c, this, return_type, name, target); }
+}
+void method_class::check_feature_duplicate(Class_ c, Symbol target ) {  
+    bool isMethodDuplicated = CT->environment[ c->get_name() ]->mt->probe( name ) != NULL;
+    if( isMethodDuplicated ) { CT->printerr_method_multiple_defined( c, this, name, target ); }
+} 
+void method_class::check_feature_method_formals( Class_ c, Symbol target ) {
+    
+
+} 
+void method_class::check_feature_inheritance(Class_ c, Symbol target ) {
+    
+    Feature orig_method = CT->environment[ c->get_name() ]->mt->lookup( name );
+    if(orig_method == NULL) { return; }
+
+    bool isRedefinedMethodReturnTypeError = orig_method->get_type() != return_type ;
+    bool isRedefinedMethodNumArgsError = orig_method->get_formals()->len() != get_formals()->len();
+
+    if( isRedefinedMethodReturnTypeError ) {
+        CT->printerr_method_redefined_typeerror( c, this, name,  return_type, orig_method->get_type(), target);
+    }
+    if( isRedefinedMethodNumArgsError ) {
+        CT->printerr_method_redefined_numargerror( c, this, name, target);
+        return;
+    }
+    // If number of args are different, typechecking each formal is impossible
+    // thus return immediately.
+    assert( orig_method->get_formals()->len() == get_formals()->len() );
+
+    bool isRedefinedMethodParamTypeError;
+    Formals orig_fs = orig_method->get_formals();
+    Formal orig_f, this_f;
+    int idx;
+    for( idx = orig_fs->first();
+        orig_fs->more(idx);
+        idx = orig_fs->next(idx) ) {
+
+        orig_f = orig_fs->nth(idx);
+        this_f = get_formals()->nth(idx);
+
+        isRedefinedMethodParamTypeError = orig_f->get_type() != this_f->get_type();
+        if( isRedefinedMethodParamTypeError ) { 
+            CT->printerr_method_paramtypeerror( c, this, get_name(), this_f->get_type(), orig_f->get_type(), target );
+            break; // the reference solution exits immediately when first mismatch is found
+        }
+
+    }
+
+}
 
 void ClassTable::install_basic_classes() {
 
@@ -268,6 +352,36 @@ void ClassTable::printerr_main_class_not_exists() {
     semant_error( ) << "Class Main is not defined.\n";
 }
 
+bool ClassTable::_is_printerr_available( Symbol target ) { return error_checked[target] == false; }
+void ClassTable::printerr_attr_name_self( Class_ c1, Feature f, Symbol target){
+    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "'self' cannot be the name of an attribute.\n";
+}
+void ClassTable::printerr_attr_type_undefined( Class_ c1, Feature f, Symbol type, Symbol name, Symbol target ) {
+    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Class " << type->get_string() << " of attribute " << name->get_string() << " is undefined.\n";
+}
+void ClassTable::printerr_method_type_undefined( Class_ c1, Feature f, Symbol type, Symbol meth, Symbol target ){
+    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Undefined return type " << type->get_string() << " in method " << meth->get_string() << ".\n";
+}
+void ClassTable::printerr_attr_multiple_defined( Class_ c1, Feature f,Symbol name, Symbol target){
+    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Attribute " << name->get_string() << " is multiply defined in class.\n";
+}
+void ClassTable::printerr_method_multiple_defined( Class_ c1, Feature f,Symbol name, Symbol target ){
+    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Method " << name->get_string() << " is multiply defined\n";
+}
+void ClassTable::printerr_attr_in_inherited_class( Class_ c1, Feature f, Symbol name, Symbol target ){
+
+}
+void ClassTable::printerr_method_redefined_typeerror (Class_ c1, Feature f, Symbol name, Symbol type, Symbol type2, Symbol target){
+
+}
+void ClassTable::printerr_method_redefined_numargerror ( Class_ c1, Feature f, Symbol name, Symbol target){
+
+}
+void ClassTable::printerr_method_paramtypeerror( Class_ c1, Feature f, Symbol name, Symbol type, Symbol type2, Symbol target){
+
+}
+
+
 ////////////////////////////////////////////////////////////////////
 //
 // Extending ClassTable function definitions
@@ -298,7 +412,6 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
     // tables for inheritance graph (maintain inverted table as well; for printing error )
     graph_nodes = new SymbolTable<Symbol, nodeIdx>();
     graph_nodes->enterscope();
-    nodeIdx *_tmp;
     graph_nodes->addid( Object,  get_new_nodeindex() ); 
     graph_nodes->addid( IO,  get_new_nodeindex() ); 
     graph_nodes->addid( SELF_TYPE,  get_new_nodeindex() ); 
@@ -309,11 +422,54 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
     graph_edges = new SymbolTable<nodeIdx, nodeIdx>();
     graph_edges->enterscope();
 
+    // table for symbol table
+    class_map = new SymbolTable<Symbol, Class__class>();
+    class_map->enterscope();
 }
 
 nodeIdx* ClassTable::get_new_nodeindex() {
     return new nodeIdx(++_latestNodeIdx); // generate index object every time
 }
+
+bool ClassTable::is_class_exists_in_program( Symbol s ) {
+
+    bool result = false;
+    int idx;
+    Class_ _class;
+    Symbol _class_name;
+    for( idx = program_classes->first();
+        program_classes->more(idx);
+        idx = program_classes->next(idx) ) {
+
+        _class = program_classes->nth(idx);
+        _class_name = _class->get_name();
+
+        if( _class_name->equal_string( s->get_string(), s->get_len() ) ) {
+            result = true;
+        }
+    }
+    return result;
+}
+
+bool ClassTable::is_class_base_class( Symbol s ) {
+    bool result = false;
+    int idx;
+    Class_ _class;
+    Symbol _class_name;
+    for( idx = base_classes->first();
+        base_classes->more(idx);
+        idx = base_classes->next(idx) ) {
+
+        _class = base_classes->nth(idx);
+        _class_name = _class->get_name();
+
+        if( _class_name->equal_string( s->get_string(), s->get_len() ) ) {
+            result = true;
+        }
+    }
+    return result;
+}
+
 int ClassTable::num_nodes() { return _latestNodeIdx; }
 
 void ClassTable::check_graph_node_build() {
@@ -448,27 +604,128 @@ void ClassTable::check_inheritance_cycle() {
 
 }
 
-void ClassTable::fill_symbol_table() {
+void ClassTable::init_symboltable() {
+    // After inheritance graph is checked, merge user_classes and base_classes
+    program_classes = 
+        append_Classes( base_classes, user_classes );    
 
-    // imput : O M C, bool reporterr
+    // build class_map & init symbol table
+    int idx;
+    Class_ _class;
+    Symbol _class_name;
+    
+    for( idx = program_classes->first();
+        program_classes->more(idx);
+        idx = program_classes->next(idx) ) {
 
+        _class = program_classes->nth(idx);
+        _class_name = _class->get_name();
+
+        // init following
+        class_map->addid( _class_name, _class );
+        environment[ _class_name ] = new OMTable();
+        error_checked[ _class_name ] = false;
+    }
+}
+
+Class_ ClassTable::get_class( Symbol s ) {
+    Class_ c = class_map->lookup(s);
+    assert( c != NULL );
+    return c;
+}
+
+void ClassTable::check_class_symboltable_build( Class_ c, Symbol target ) {
+
+    Class_ _class, _class_parent;
+    Symbol _class_name, _class_parent_name;
+
+    _class = c;
+    _class_name = _class->get_name();
+
+    // For each features, following cases are checked:
+    int idx;
+    Features features = c->get_features();
+    Feature f;
+
+    if( ! is_class_base_class(_class_name) ) {     
+        for( idx = features->first();
+            features->more(idx);
+            idx = features->next(idx) ) {
+
+            f = features->nth(idx);
+            f->check_feature_name_type(c, target);       // this may call either attr_class:: or method_class::
+            f->check_feature_method_formals(c, target);
+            f->check_feature_inheritance(c, target);     // all inheritance scoping is already determined.
+        }
+    }
+
+    for( idx = features->first();
+        features->more(idx);
+        idx = features->next(idx) ) {
+
+        f = features->nth(idx);
+        if( ! is_class_base_class(_class_name) ) { 
+            f->check_feature_duplicate(c, target);      // check duplicate features
+        }
+        f->add_feature( _class_name );
+    }
+
+    // note that this function is called multiple times,
+    // but error checking is announced only once.
+    error_checked[_class_name] = true;
+}
+
+void ClassTable::check_types( ) {
+
+    // TODO expression 계산하고 마지막에 attr이나 method type과 비교할때 해당 type이 유효하지 않으면 마지막 비교과정 생략하면 됨. 이미 유효하지 않다고 에러 뽑았기 때문.
+    // 즉, 맞지 않는다 = 두 type이 유효한데, 서로 호한 안된다 이고, 나머지 경우는 에러 이미 나왔기때문에 silent!
+}
+
+void ClassTable::check_parent_symboltable_build( Symbol s_c, Symbol target ) {
+
+    // case when no parent
+    bool isThisNoclass = s_c == No_class;
+    if( isThisNoclass ) {
+        return;
+    }
+
+    Class_ _class, _class_parent;
+    Symbol _class_name, _class_parent_name;
+
+    _class = class_map->lookup(s_c);
+    _class_name = s_c;
+    _class_parent_name = _class->get_parent();
+    _class_parent = class_map->lookup(_class_parent_name);
+    //assert( _class_name != NULL && _class_parent_name != NULL && _class_parent != NULL );
+    
+    check_parent_symboltable_build( _class_parent_name , target );    // recursively call parent
+    check_class_symboltable_build( _class, target );            // add current table
+    environment[target]->enterscope();                          // enter scope for child to start in new scope
 }
 
 void ClassTable::check_name_scope() {
 
-    // 
+    int idx;
+    Class_ _class, _class_parent;
+    Symbol _class_name, _class_parent_name;
+    for( idx = program_classes->first();
+        program_classes->more(idx);
+        idx = program_classes->next(idx) ) {
 
-    // foreach class in ordered classes, 
-        // recursively traverse parent / if parent traverse, do not omit error
-        // add new scope
-        // add mine
+        _class = program_classes->nth(idx);
+        _class_name = _class->get_name();
+        _class_parent_name = _class->get_parent();
+        _class_parent = class_map->lookup(_class_parent_name);
+        assert( _class_name != NULL && _class_parent_name != NULL );
 
-
+        // check build on _class_parent
+        check_parent_symboltable_build( _class_name, _class_name );
+        // build on _class_name
+        environment[_class_name]->add_attr( self, _class_name ); // add self
+        check_class_symboltable_build( _class, _class_name );
+    }
 }
 
-void ClassTable::check_types() {
-    
-}
 
 void ClassTable::check_entrypoint() {
 
@@ -512,6 +769,7 @@ void program_class::semant()
 
     // Generate classtable by constructor call
     ClassTable *classtable = new ClassTable(classes);
+    CT = classtable;
     // Build inheritance graph & Check inheritance validity
     classtable->check_graph_node_build();
     classtable->check_graph_edge_build();
@@ -523,17 +781,13 @@ void program_class::semant()
     // VERIFICATION UNIT 2
     // ===================
 
-    // After inheritance graph is checked, merge user_classes and language_classes
-    classtable->program_classes = 
-        append_Classes( classtable->base_classes, classtable->user_classes );
+    // Scopechecking
+    classtable->init_symboltable();
+    classtable->check_name_scope();
+    
     // Check program entrypoint
     classtable->check_entrypoint();
 
-    // TODO Fill symbol table 
-
-    // Scopechecking
-    classtable->check_name_scope();
-    
     // Typechecking
     classtable->check_types();
 
