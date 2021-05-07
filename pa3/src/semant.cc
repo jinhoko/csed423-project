@@ -100,6 +100,7 @@ Symbol method_class::get_type() { return return_type; }
 Formals method_class::get_formals() { return formals; }
 Formals attr_class::get_formals() { return NULL; }
 Symbol formal_class::get_type() { return type_decl; }
+Symbol formal_class::get_name() { return name; }
 
 void attr_class::add_feature( Symbol c ) { if( get_name() != self ) CT->environment[c]->add_attr(get_name(), this->type_decl); }
 void method_class::add_feature( Symbol c ) { CT->environment[c]->add_method(get_name(), this); }
@@ -136,9 +137,35 @@ bool method_class::check_feature_duplicate(Class_ c, Symbol target ) {
 } 
 bool method_class::check_feature_method_formals( Class_ c, Symbol target ) {
     
-    
-    // TODO write formals
-    return false; // todo change
+    // use temporary symboltable for duplicate check
+    SymbolTable<Symbol, noData>* fTable = new SymbolTable<Symbol, noData>();
+    fTable->enterscope();
+    bool isFormalNameSelf;
+    bool isFormalTypeSelf;
+    bool isFormalDuplicated;
+    bool isErrorFound = false;
+    Formal f; Symbol fname; Symbol ftype;
+    int idx;
+    for( idx = get_formals()->first();
+        get_formals()->more(idx);
+        idx = get_formals()->next(idx) ) {
+
+        f = get_formals()->nth(idx);
+        fname = f->get_name();
+        ftype = f->get_type();
+
+        isFormalDuplicated = fTable->lookup( f->get_name() ) != NULL;
+        isFormalNameSelf = fname == self;
+        isFormalTypeSelf = ftype == SELF_TYPE;
+        
+        if( isFormalDuplicated || isFormalNameSelf || isFormalTypeSelf ) { isErrorFound = true; }
+        if( isFormalDuplicated ){ CT->printerr_method_multiple_formal( c, this, fname, target); }
+        if ( isFormalNameSelf ) { CT->printerr_method_formal_selfname( c, this, target ); }
+        if ( isFormalTypeSelf ) { CT->printerr_method_formal_selftype( c, this, fname, target); }
+
+        fTable->addid( fname, CT->_garbage );
+    }
+    return isErrorFound;
 } 
 bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
     
@@ -184,6 +211,10 @@ bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
     return isRedefinedMethodReturnTypeError || isRedefinedMethodParamTypeError;
 
 }
+
+// void attr_class::check_type() {
+
+// } // TODO start writing here
 
 void ClassTable::install_basic_classes() {
 
@@ -394,7 +425,18 @@ void ClassTable::printerr_method_paramtypeerror( Class_ c1, Feature f, Symbol na
     if( _is_printerr_available(c1, target))
         semant_error( c1->get_filename(), f ) << "In redefined method " << name->get_string() << ", parameter type " << type->get_string() << " is different from original type " << type2->get_string() << ".\n";
 }
-
+void ClassTable::printerr_method_multiple_formal( Class_ c1, Feature f, Symbol name, Symbol target ) {
+    if( _is_printerr_available(c1, target))
+        semant_error( c1->get_filename(), f ) << "Formal parameter " << name->get_string() << " is multiply defined.\n";
+}
+void ClassTable::printerr_method_formal_selftype( Class_ c1, Feature f, Symbol name, Symbol target   ) {
+    if( _is_printerr_available(c1, target))
+        semant_error( c1->get_filename(), f ) << "Formal parameter " << name->get_string() << " cannot have type SELF_TYPE.\n";
+}
+void ClassTable::printerr_method_formal_selfname( Class_ c1, Feature f, Symbol target ){
+    if( _is_printerr_available(c1, target))
+        semant_error( c1->get_filename(), f ) << "'self' cannot be the name of a formal parameter.\n";
+}
 
 ////////////////////////////////////////////////////////////////////
 //

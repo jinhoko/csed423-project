@@ -10,5 +10,6 @@ class Main inherits IO {
     third( a:Bool, b:SELF_TYPE ): InvalidType {  b+1  };
     four( a:Bool, self:Int ): SELF_TYPE {  self  };
     five( a:Bool, a:Int ): Int {  a  };
+    six( a:Bool, a:Int, a:SELF_TYPE, self:SELF_TYPE  ) : Int { 1} ;
 };
 

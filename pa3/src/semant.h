@@ -134,7 +134,9 @@ public:
   void printerr_method_redefined_typeerror (Class_ c1, Feature f, Symbol name, Symbol type, Symbol type2, Symbol target);
   void printerr_method_redefined_numargerror ( Class_ c1, Feature f, Symbol name, Symbol target);
   void printerr_method_paramtypeerror( Class_ c1, Feature f, Symbol name, Symbol type, Symbol type2, Symbol target );
-
+  void printerr_method_multiple_formal( Class_ c1, Feature f, Symbol name, Symbol target );
+  void printerr_method_formal_selftype( Class_ c1, Feature f, Symbol name, Symbol target   ) ;
+  void printerr_method_formal_selfname( Class_ c1, Feature f, Symbol target );
 };
 
 
