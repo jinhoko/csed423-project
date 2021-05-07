@@ -100,7 +100,7 @@ public:
   // check name_scope & fill symbol table
   Env environment;           // environment map
   SymbolTable<Symbol, Class__class> *class_map;     // mapping from symbol to class object
-  std::map<Symbol, bool> error_checked;            // check if the errors of the class is checked
+  SymbolTable<Symbol, noData> error_checked;          // check if the errors of the class is checked
 
   Class_ get_class( Symbol s );
   void init_symboltable();
@@ -124,7 +124,7 @@ public:
 
   // due to recursive print_err, the following printerr functions will
   // omit error after checking error_checked
-  bool _is_printerr_available( Symbol target );
+  bool _is_printerr_available( Class_ c1, Symbol target );
   void printerr_attr_name_self( Class_ c1, Feature f,Symbol target );
   void printerr_attr_type_undefined( Class_ c1, Feature f, Symbol type, Symbol name, Symbol target );
   void printerr_method_type_undefined( Class_ c1, Feature f, Symbol type, Symbol meth, Symbol target );

@@ -101,53 +101,62 @@ Formals method_class::get_formals() { return formals; }
 Formals attr_class::get_formals() { return NULL; }
 Symbol formal_class::get_type() { return type_decl; }
 
-void attr_class::add_feature( Symbol c ) { CT->environment[c]->add_attr(get_name(), this->type_decl); }
+void attr_class::add_feature( Symbol c ) { if( get_name() != self ) CT->environment[c]->add_attr(get_name(), this->type_decl); }
 void method_class::add_feature( Symbol c ) { CT->environment[c]->add_method(get_name(), this); }
 
-void attr_class::check_feature_name_type( Class_ c, Symbol target ) { 
+bool attr_class::check_feature_name_type( Class_ c, Symbol target ) { 
     bool isAttrNameSelf = name == self;
     bool isAttrTypeDefined = CT->is_class_exists_in_program( type_decl ) || type_decl == prim_slot;
 
     if( isAttrNameSelf ) { CT->printerr_attr_name_self( c, this, target ); }
-    if( !isAttrTypeDefined ) { CT->printerr_attr_type_undefined( c, this, type_decl, name,  target ); }
+    if( !isAttrTypeDefined ) { CT->printerr_attr_type_undefined( c, this, type_decl, name, target ); }
+    return isAttrNameSelf || !isAttrTypeDefined;
 }
-void attr_class::check_feature_duplicate(  Class_ c, Symbol target  ) {
-    bool isAttrDuplicated = CT->environment[ c->get_name() ]->ot->probe( name ) != NULL;
+bool attr_class::check_feature_duplicate(  Class_ c, Symbol target  ) {
+    bool isAttrDuplicated = (CT->environment[ target ]->ot->probe( name ) != NULL) && (name != self);
     if( isAttrDuplicated ) { CT->printerr_attr_multiple_defined( c, this, name, target ); }
+    return isAttrDuplicated;
 }
-void attr_class::check_feature_method_formals( Class_ c, Symbol target  ) { return; }
-void attr_class::check_feature_inheritance( Class_ c, Symbol target ) {
-
-    bool isAttrDefinedInParent = CT->environment[ c->get_name() ]->ot->lookup( name ) != NULL;
+bool attr_class::check_feature_method_formals( Class_ c, Symbol target  ) { return false; }
+bool attr_class::check_feature_inheritance( Class_ c, Symbol target ) {
+    bool isAttrDefinedInParent = CT->environment[ target ]->ot->lookup( name ) != NULL;
     if( isAttrDefinedInParent ) { CT->printerr_attr_in_inherited_class( c, this, name, target ); }
+    return isAttrDefinedInParent;
 }
 
-void method_class::check_feature_name_type( Class_ c, Symbol target ) {
-    bool isMethodTypeDefined = CT->is_class_exists_in_program( return_type ) || return_type == SELF_TYPE;
+bool method_class::check_feature_name_type( Class_ c, Symbol target ) {
+    bool isMethodTypeDefined = CT->is_class_exists_in_program( return_type ) || (return_type == SELF_TYPE);
     if( !isMethodTypeDefined ) { CT->printerr_method_type_undefined( c, this, return_type, name, target); }
+    return !isMethodTypeDefined;
 }
-void method_class::check_feature_duplicate(Class_ c, Symbol target ) {  
-    bool isMethodDuplicated = CT->environment[ c->get_name() ]->mt->probe( name ) != NULL;
+bool method_class::check_feature_duplicate(Class_ c, Symbol target ) {  
+    bool isMethodDuplicated = CT->environment[ target ]->mt->probe( name ) != NULL;
     if( isMethodDuplicated ) { CT->printerr_method_multiple_defined( c, this, name, target ); }
+    return isMethodDuplicated;
 } 
-void method_class::check_feature_method_formals( Class_ c, Symbol target ) {
+bool method_class::check_feature_method_formals( Class_ c, Symbol target ) {
     
-
+    
+    // TODO write formals
+    return false; // todo change
 } 
-void method_class::check_feature_inheritance(Class_ c, Symbol target ) {
+bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
     
-    Feature orig_method = CT->environment[ c->get_name() ]->mt->lookup( name );
-    if(orig_method == NULL) { return; }
+    Feature orig_method = CT->environment[ target ]->mt->lookup( name );
+    if(orig_method == NULL) { return false; }
 
     bool isRedefinedMethodReturnTypeError = orig_method->get_type() != return_type ;
     bool isRedefinedMethodNumArgsError = orig_method->get_formals()->len() != get_formals()->len();
 
+    // CT->semant_error() << "inerit!" << orig_method->get_name()->get_string()  << std::endl; // TODO del
+    // orig_method->get_formals()->dump( CT->semant_error(), 2) ;
+    // CT->semant_error() << std::endl;
     if( isRedefinedMethodReturnTypeError ) {
         CT->printerr_method_redefined_typeerror( c, this, name,  return_type, orig_method->get_type(), target);
     }
     if( isRedefinedMethodNumArgsError ) {
         CT->printerr_method_redefined_numargerror( c, this, name, target);
-        return;
+        return true ;
     }
     // If number of args are different, typechecking each formal is impossible
     // thus return immediately.
@@ -162,15 +171,17 @@ void method_class::check_feature_inheritance(Class_ c, Symbol target ) {
         idx = orig_fs->next(idx) ) {
 
         orig_f = orig_fs->nth(idx);
-        this_f = get_formals()->nth(idx);
+        this_f = this->get_formals()->nth(idx);
+
+        //CT->semant_error() << orig_f->get_type()->get_string() << "--" << this_f->get_type()->get_string() << std::endl; // TODO del
 
         isRedefinedMethodParamTypeError = orig_f->get_type() != this_f->get_type();
         if( isRedefinedMethodParamTypeError ) { 
             CT->printerr_method_paramtypeerror( c, this, get_name(), this_f->get_type(), orig_f->get_type(), target );
             break; // the reference solution exits immediately when first mismatch is found
         }
-
     }
+    return isRedefinedMethodReturnTypeError || isRedefinedMethodParamTypeError;
 
 }
 
@@ -352,33 +363,36 @@ void ClassTable::printerr_main_class_not_exists() {
     semant_error( ) << "Class Main is not defined.\n";
 }
 
-bool ClassTable::_is_printerr_available( Symbol target ) { return error_checked[target] == false; }
+bool ClassTable::_is_printerr_available( Class_ c1, Symbol target ) { return c1->get_name() == target; }
 void ClassTable::printerr_attr_name_self( Class_ c1, Feature f, Symbol target){
-    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "'self' cannot be the name of an attribute.\n";
+    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "'self' cannot be the name of an attribute.\n";
 }
 void ClassTable::printerr_attr_type_undefined( Class_ c1, Feature f, Symbol type, Symbol name, Symbol target ) {
-    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Class " << type->get_string() << " of attribute " << name->get_string() << " is undefined.\n";
+    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Class " << type->get_string() << " of attribute " << name->get_string() << " is undefined.\n";
 }
 void ClassTable::printerr_method_type_undefined( Class_ c1, Feature f, Symbol type, Symbol meth, Symbol target ){
-    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Undefined return type " << type->get_string() << " in method " << meth->get_string() << ".\n";
+    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Undefined return type " << type->get_string() << " in method " << meth->get_string() << ".\n";
 }
 void ClassTable::printerr_attr_multiple_defined( Class_ c1, Feature f,Symbol name, Symbol target){
-    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Attribute " << name->get_string() << " is multiply defined in class.\n";
+    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Attribute " << name->get_string() << " is multiply defined in class.\n";
 }
 void ClassTable::printerr_method_multiple_defined( Class_ c1, Feature f,Symbol name, Symbol target ){
-    if( _is_printerr_available(target)) semant_error( c1->get_filename(), f ) << "Method " << name->get_string() << " is multiply defined\n";
+    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Method " << name->get_string() << " is multiply defined\n";
 }
 void ClassTable::printerr_attr_in_inherited_class( Class_ c1, Feature f, Symbol name, Symbol target ){
-
+    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Attribute " << name->get_string() << " is an attribute of an inherited class.\n";
 }
 void ClassTable::printerr_method_redefined_typeerror (Class_ c1, Feature f, Symbol name, Symbol type, Symbol type2, Symbol target){
-
+    if( _is_printerr_available(c1, target))
+        semant_error( c1->get_filename(), f ) << "In redefined method " << name->get_string() << ", return type " << type->get_string() << " is different from original return type "<< type2->get_string() << ".\n";
 }
 void ClassTable::printerr_method_redefined_numargerror ( Class_ c1, Feature f, Symbol name, Symbol target){
-
+    if( _is_printerr_available(c1, target))
+        semant_error( c1->get_filename(), f ) << "Incompatible number of formal parameters in redefined method "<< name->get_string() <<".\n";
 }
 void ClassTable::printerr_method_paramtypeerror( Class_ c1, Feature f, Symbol name, Symbol type, Symbol type2, Symbol target){
-
+    if( _is_printerr_available(c1, target))
+        semant_error( c1->get_filename(), f ) << "In redefined method " << name->get_string() << ", parameter type " << type->get_string() << " is different from original type " << type2->get_string() << ".\n";
 }
 
 
@@ -425,6 +439,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
     // table for symbol table
     class_map = new SymbolTable<Symbol, Class__class>();
     class_map->enterscope();
+    error_checked.enterscope();
 }
 
 nodeIdx* ClassTable::get_new_nodeindex() {
@@ -624,7 +639,6 @@ void ClassTable::init_symboltable() {
         // init following
         class_map->addid( _class_name, _class );
         environment[ _class_name ] = new OMTable();
-        error_checked[ _class_name ] = false;
     }
 }
 
@@ -647,15 +661,21 @@ void ClassTable::check_class_symboltable_build( Class_ c, Symbol target ) {
     Features features = c->get_features();
     Feature f;
 
+    // semant_error() << "current " << c->get_name()->get_string() << ", target " << target->get_string() << std::endl;// TODO Del
+
+    // note that this function is called multiple times,
+    // but error checking is announced only once.
+    // by checking if c->get_name == target
+    std::vector<bool> isFeatureError( features->len() , false );
     if( ! is_class_base_class(_class_name) ) {     
         for( idx = features->first();
             features->more(idx);
             idx = features->next(idx) ) {
 
             f = features->nth(idx);
-            f->check_feature_name_type(c, target);       // this may call either attr_class:: or method_class::
-            f->check_feature_method_formals(c, target);
-            f->check_feature_inheritance(c, target);     // all inheritance scoping is already determined.
+            isFeatureError[idx] = f->check_feature_name_type(c, target) || isFeatureError[idx];       // this may call either attr_class:: or method_class::
+            isFeatureError[idx] = f->check_feature_method_formals(c, target) || isFeatureError[idx];
+            isFeatureError[idx] = f->check_feature_inheritance(c, target)|| isFeatureError[idx];     // all inheritance scoping is already determined.
         }
     }
 
@@ -665,20 +685,24 @@ void ClassTable::check_class_symboltable_build( Class_ c, Symbol target ) {
 
         f = features->nth(idx);
         if( ! is_class_base_class(_class_name) ) { 
-            f->check_feature_duplicate(c, target);      // check duplicate features
+            // Note) the function calls must avoid short circuting
+            isFeatureError[idx] = f->check_feature_duplicate(c, target) || isFeatureError[idx]; // check duplicate features
         }
-        f->add_feature( _class_name );
+        if( (_class_name != target) && isFeatureError[idx] ){ continue; }        // for parents, admit only one duplicate
+        f->add_feature( target );
+        
     }
+    //semant_error() << std::endl; // TODO del
 
-    // note that this function is called multiple times,
-    // but error checking is announced only once.
-    error_checked[_class_name] = true;
+
 }
 
 void ClassTable::check_types( ) {
 
     // TODO expression 계산하고 마지막에 attr이나 method type과 비교할때 해당 type이 유효하지 않으면 마지막 비교과정 생략하면 됨. 이미 유효하지 않다고 에러 뽑았기 때문.
     // 즉, 맞지 않는다 = 두 type이 유효한데, 서로 호한 안된다 이고, 나머지 경우는 에러 이미 나왔기때문에 silent!
+
+    // method는 formal introduce할때 self로 생긴거 빼고 다 넣어버리면 됨
 }
 
 void ClassTable::check_parent_symboltable_build( Symbol s_c, Symbol target ) {
@@ -717,12 +741,14 @@ void ClassTable::check_name_scope() {
         _class_parent_name = _class->get_parent();
         _class_parent = class_map->lookup(_class_parent_name);
         assert( _class_name != NULL && _class_parent_name != NULL );
-
+        
         // check build on _class_parent
-        check_parent_symboltable_build( _class_name, _class_name );
+        check_parent_symboltable_build( _class_parent_name, _class_name );
         // build on _class_name
-        environment[_class_name]->add_attr( self, _class_name ); // add self
         check_class_symboltable_build( _class, _class_name );
+        environment[_class_name]->add_attr( self, _class_name ); // add self
+    //    environment[_class_name]->mt->dump();
+    //    semant_error() << _class_name->get_string() << "OT scope임====================" << std::endl; // TODO del
     }
 }
 

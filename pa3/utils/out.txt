@@ -1,0 +1,5155 @@
+../semant-test/mine/t1.cl:15: Class Main was previously defined.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t2.cl:46: Class AA, or an ancestor of AA, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:40: Class Bad, or an ancestor of Bad, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:33: Class D, or an ancestor of D, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:27: Class C, or an ancestor of C, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:21: Class B, or an ancestor of B, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:15: Class A, or an ancestor of A, is involved in an inheritance cycle.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t3.cl:21: Class B, or an ancestor of B, is involved in an inheritance cycle.
+../semant-test/mine/t3.cl:15: Class A, or an ancestor of A, is involved in an inheritance cycle.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t4.cl:45: Class G inherits from an undefined class A.
+../semant-test/mine/t4.cl:27: Class D cannot inherit class Bool.
+../semant-test/mine/t4.cl:21: Class C cannot inherit class Int.
+../semant-test/mine/t4.cl:15: Class B cannot inherit class SELF_TYPE.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t5.cl:5: Redefinition of basic class Object.
+../semant-test/mine/t5.cl:11: Redefinition of basic class IO.
+../semant-test/mine/t5.cl:17: Redefinition of basic class Int.
+../semant-test/mine/t5.cl:23: Redefinition of basic class Bool.
+../semant-test/mine/t5.cl:29: Redefinition of basic class String.
+../semant-test/mine/t5.cl:41: Class G inherits from an undefined class A.
+../semant-test/mine/t5.cl:35: Class B cannot inherit class String.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t6.cl:9: No 'main' method in class Main.
+../semant-test/mine/t6.cl:23: Dispatch to undefined method out_strin.
+../semant-test/mine/t6.cl:25: Inferred return type Object of method mainnnnnnnn does not conform to declared return type SELF_TYPE.
+Compilation halted due to static semantic errors.
+Class Main is not defined.
+../semant-test/mine/t7.cl:31: Dispatch to undefined method out_strin.
+../semant-test/mine/t7.cl:33: Inferred return type Object of method mainnnnnnnn does not conform to declared return type SELF_TYPE.
+Compilation halted due to static semantic errors.
+Class Main is not defined.
+Compilation halted due to static semantic errors.
+#4
+_program
+  #4
+  _class
+    Main
+    IO
+    "../semant-test/ta/IO_int.cl"
+    (
+    #3
+    _method
+      main
+      SELF_TYPE
+      #3
+      _dispatch
+        #2
+        _dispatch
+          #2
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #2
+          _string
+            "Here comes a number "
+          : String
+          )
+        : SELF_TYPE
+        out_int
+        (
+        #3
+        _int
+          55
+        : Int
+        )
+      : SELF_TYPE
+    )
+#4
+_program
+  #4
+  _class
+    Main
+    Object
+    "../semant-test/ta/assign_attribute_correct.cl"
+    (
+    #2
+    _attr
+      a
+      Int
+      #2
+      _int
+        1
+      : Int
+    #3
+    _method
+      main
+      Int
+      #3
+      _assign
+        a
+        #3
+        _int
+          1
+        : Int
+      : Int
+    )
+../semant-test/ta/block_incorrect.cl:2: Inferred return type Bool of method main does not conform to declared return type Int.
+Compilation halted due to static semantic errors.
+Class Main is not defined.
+../semant-test/ta/case1.cl:7: Undefined return type Void in method do.
+../semant-test/ta/case1.cl:4: Class Object1 of case branch is undefined.
+../semant-test/ta/case1.cl:5: Class Object2 of case branch is undefined.
+../semant-test/ta/case1.cl:5: Dispatch on undefined class Object2.
+Compilation halted due to static semantic errors.
+Class Main is not defined.
+Compilation halted due to static semantic errors.
+#16
+_program
+  #16
+  _class
+    Main
+    IO
+    "../semant-test/ta/concat.cl"
+    (
+    #2
+    _attr
+      sum
+      String
+      #2
+      _string
+        ""
+      : String
+    #3
+    _attr
+      s
+      String
+      #3
+      _string
+        "_"
+      : String
+    #15
+    _method
+      main
+      Object
+      #14
+      _block
+        #12
+        _loop
+          #6
+          _comp
+            #6
+            _eq
+              #6
+              _object
+                s
+              : String
+              #6
+              _string
+                ""
+              : String
+            : Bool
+          : Bool
+          #11
+          _block
+            #8
+            _dispatch
+              #8
+              _object
+                self
+              : SELF_TYPE
+              out_string
+              (
+              #8
+              _string
+                "Type in a line: "
+              : String
+              )
+            : SELF_TYPE
+            #9
+            _assign
+              s
+              #9
+              _dispatch
+                #9
+                _object
+                  self
+                : SELF_TYPE
+                in_string
+                (
+                )
+              : String
+            : String
+            #10
+            _assign
+              sum
+              #10
+              _dispatch
+                #10
+                _object
+                  sum
+                : String
+                concat
+                (
+                #10
+                _object
+                  s
+                : String
+                )
+              : String
+            : String
+          : String
+        : Object
+        #13
+        _dispatch
+          #13
+          _dispatch
+            #13
+            _dispatch
+              #13
+              _object
+                self
+              : SELF_TYPE
+              out_string
+              (
+              #13
+              _string
+                "The sum is:\n"
+              : String
+              )
+            : SELF_TYPE
+            out_string
+            (
+            #13
+            _object
+              sum
+            : String
+            )
+          : SELF_TYPE
+          out_string
+          (
+          #13
+          _string
+            "\n"
+          : String
+          )
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+../semant-test/ta/dispatch_incorrect.cl:16: In call of method init, type Int of parameter y does not conform to declared type Bool.
+../semant-test/ta/dispatch_incorrect.cl:17: Method init called with wrong number of arguments.
+../semant-test/ta/dispatch_incorrect.cl:18: Dispatch to undefined method iinit.
+Compilation halted due to static semantic errors.
+#83
+_program
+  #83
+  _class
+    Main
+    IO
+    "../semant-test/ta/equality.cl"
+    (
+    #2
+    _attr
+      c
+      String
+      #2
+      _string
+        "Correct\n"
+      : String
+    #3
+    _attr
+      w
+      String
+      #3
+      _string
+        "Wrong\n"
+      : String
+    #82
+    _method
+      main
+      SELF_TYPE
+      #81
+      _block
+        #6
+        _dispatch
+          #6
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #6
+          _string
+            "Bool1 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #10
+        _cond
+          #7
+          _eq
+            #7
+            _bool
+              1
+            : Bool
+            #7
+            _dispatch
+              #7
+              _bool
+                1
+              : Bool
+              copy
+              (
+              )
+            : Bool
+          : Bool
+          #8
+          _dispatch
+            #8
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #8
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #9
+          _dispatch
+            #9
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #9
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #11
+        _dispatch
+          #11
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #11
+          _string
+            "Bool2 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #15
+        _cond
+          #12
+          _eq
+            #12
+            _bool
+              0
+            : Bool
+            #12
+            _dispatch
+              #12
+              _bool
+                0
+              : Bool
+              copy
+              (
+              )
+            : Bool
+          : Bool
+          #13
+          _dispatch
+            #13
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #13
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #14
+          _dispatch
+            #14
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #14
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #16
+        _dispatch
+          #16
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #16
+          _string
+            "Bool3 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #20
+        _cond
+          #17
+          _eq
+            #17
+            _bool
+              0
+            : Bool
+            #17
+            _dispatch
+              #17
+              _bool
+                1
+              : Bool
+              copy
+              (
+              )
+            : Bool
+          : Bool
+          #18
+          _dispatch
+            #18
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #18
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+          #19
+          _dispatch
+            #19
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #19
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #21
+        _dispatch
+          #21
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #21
+          _string
+            "Bool4 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #25
+        _cond
+          #22
+          _eq
+            #22
+            _bool
+              1
+            : Bool
+            #22
+            _dispatch
+              #22
+              _bool
+                0
+              : Bool
+              copy
+              (
+              )
+            : Bool
+          : Bool
+          #23
+          _dispatch
+            #23
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #23
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+          #24
+          _dispatch
+            #24
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #24
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #26
+        _dispatch
+          #26
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #26
+          _string
+            "Bool Neg: "
+          : String
+          )
+        : SELF_TYPE
+        #30
+        _cond
+          #28
+          _comp
+            #27
+            _eq
+              #27
+              _bool
+                1
+              : Bool
+              #27
+              _dispatch
+                #27
+                _bool
+                  1
+                : Bool
+                copy
+                (
+                )
+              : Bool
+            : Bool
+          : Bool
+          #28
+          _dispatch
+            #28
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #28
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+          #29
+          _dispatch
+            #29
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #29
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #31
+        _dispatch
+          #31
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #31
+          _string
+            "Int1 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #35
+        _cond
+          #32
+          _eq
+            #32
+            _int
+              5
+            : Int
+            #32
+            _dispatch
+              #32
+              _int
+                5
+              : Int
+              copy
+              (
+              )
+            : Int
+          : Bool
+          #33
+          _dispatch
+            #33
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #33
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #34
+          _dispatch
+            #34
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #34
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #36
+        _dispatch
+          #36
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #36
+          _string
+            "Int2 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #40
+        _cond
+          #37
+          _eq
+            #37
+            _int
+              7
+            : Int
+            #37
+            _dispatch
+              #37
+              _int
+                3
+              : Int
+              copy
+              (
+              )
+            : Int
+          : Bool
+          #38
+          _dispatch
+            #38
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #38
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+          #39
+          _dispatch
+            #39
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #39
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #41
+        _dispatch
+          #41
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #41
+          _string
+            "Neg Int1: "
+          : String
+          )
+        : SELF_TYPE
+        #45
+        _cond
+          #42
+          _lt
+            #42
+            _neg
+              #42
+              _int
+                3
+              : Int
+            : Int
+            #42
+            _neg
+              #42
+              _dispatch
+                #42
+                _int
+                  5
+                : Int
+                copy
+                (
+                )
+              : Int
+            : Int
+          : Bool
+          #43
+          _dispatch
+            #43
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #43
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+          #44
+          _dispatch
+            #44
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #44
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #46
+        _dispatch
+          #46
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #46
+          _string
+            "Neg Int2: "
+          : String
+          )
+        : SELF_TYPE
+        #50
+        _cond
+          #47
+          _leq
+            #47
+            _neg
+              #47
+              _int
+                6
+              : Int
+            : Int
+            #47
+            _neg
+              #47
+              _dispatch
+                #47
+                _int
+                  6
+                : Int
+                copy
+                (
+                )
+              : Int
+            : Int
+          : Bool
+          #48
+          _dispatch
+            #48
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #48
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #49
+          _dispatch
+            #49
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #49
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #51
+        _dispatch
+          #51
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #51
+          _string
+            "Pos Int1: "
+          : String
+          )
+        : SELF_TYPE
+        #55
+        _cond
+          #52
+          _lt
+            #52
+            _int
+              3
+            : Int
+            #52
+            _dispatch
+              #52
+              _int
+                5
+              : Int
+              copy
+              (
+              )
+            : Int
+          : Bool
+          #53
+          _dispatch
+            #53
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #53
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #54
+          _dispatch
+            #54
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #54
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #56
+        _dispatch
+          #56
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #56
+          _string
+            "Pos Int2: "
+          : String
+          )
+        : SELF_TYPE
+        #60
+        _cond
+          #57
+          _leq
+            #57
+            _int
+              7
+            : Int
+            #57
+            _dispatch
+              #57
+              _int
+                7
+              : Int
+              copy
+              (
+              )
+            : Int
+          : Bool
+          #58
+          _dispatch
+            #58
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #58
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #59
+          _dispatch
+            #59
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #59
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #61
+        _dispatch
+          #61
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #61
+          _string
+            "String1 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #65
+        _cond
+          #62
+          _eq
+            #62
+            _string
+              "true"
+            : String
+            #62
+            _string
+              "true"
+            : String
+          : Bool
+          #63
+          _dispatch
+            #63
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #63
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #64
+          _dispatch
+            #64
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #64
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #66
+        _dispatch
+          #66
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #66
+          _string
+            "String2 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #70
+        _cond
+          #67
+          _eq
+            #67
+            _string
+              "true"
+            : String
+            #67
+            _dispatch
+              #67
+              _string
+                "true"
+              : String
+              copy
+              (
+              )
+            : String
+          : Bool
+          #68
+          _dispatch
+            #68
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #68
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #69
+          _dispatch
+            #69
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #69
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #71
+        _dispatch
+          #71
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #71
+          _string
+            "String3 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #75
+        _cond
+          #72
+          _eq
+            #72
+            _string
+              "true_"
+            : String
+            #72
+            _dispatch
+              #72
+              _string
+                "true"
+              : String
+              copy
+              (
+              )
+            : String
+          : Bool
+          #73
+          _dispatch
+            #73
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #73
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+          #74
+          _dispatch
+            #74
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #74
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+        #76
+        _dispatch
+          #76
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #76
+          _string
+            "String4 Eq: "
+          : String
+          )
+        : SELF_TYPE
+        #80
+        _cond
+          #77
+          _eq
+            #77
+            _string
+              ""
+            : String
+            #77
+            _dispatch
+              #77
+              _string
+                ""
+              : String
+              copy
+              (
+              )
+            : String
+          : Bool
+          #78
+          _dispatch
+            #78
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #78
+            _object
+              c
+            : String
+            )
+          : SELF_TYPE
+          #79
+          _dispatch
+            #79
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #79
+            _object
+              w
+            : String
+            )
+          : SELF_TYPE
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+#6
+_program
+  #6
+  _class
+    Main
+    IO
+    "../semant-test/ta/isvoid.cl"
+    (
+    #2
+    _attr
+      x
+      Bool
+      #2
+      _no_expr
+      : _no_type
+    #5
+    _method
+      main
+      Object
+      #5
+      _block
+        #4
+        _isvoid
+          #4
+          _bool
+            1
+          : Bool
+        : Bool
+        #4
+        _isvoid
+          #4
+          _bool
+            0
+          : Bool
+        : Bool
+        #4
+        _isvoid
+          #4
+          _object
+            x
+          : Bool
+        : Bool
+      : Bool
+    )
+#7
+_program
+  #7
+  _class
+    Main
+    Object
+    "../semant-test/ta/let_correct.cl"
+    (
+    #6
+    _method
+      main
+      Int
+      #6
+      _let
+        x
+        Bool
+        #3
+        _bool
+          1
+        : Bool
+        #6
+        _let
+          x
+          Int
+          #4
+          _int
+            1
+          : Int
+          #6
+          _object
+            x
+          : Int
+        : Int
+      : Int
+    )
+../semant-test/ta/plus_incorrect.cl:2: non-Int arguments: Int + Bool
+Compilation halted due to static semantic errors.
+../semant-test/ta/redef_feature.cl:18: In redefined method isNil, return type Bool is different from original return type Object.
+../semant-test/ta/redef_feature.cl:34: In redefined method isNil, return type Bool is different from original return type Object.
+Class Main is not defined.
+../semant-test/ta/redef_feature.cl:9: Inferred return type Object of method car does not conform to declared return type Int.
+../semant-test/ta/redef_feature.cl:11: Inferred return type Object of method cdr does not conform to declared return type List.
+Compilation halted due to static semantic errors.
+../semant-test/ta/self_type.cl:16: Redefinition of basic class SELF_TYPE.
+../semant-test/ta/self_type.cl:4: Class C1 cannot inherit class SELF_TYPE.
+Compilation halted due to static semantic errors.
+#3
+_program
+  #3
+  _class
+    Main
+    Object
+    "../semant-test/ta/simple_type_correct.cl"
+    (
+    #2
+    _method
+      main
+      Int
+      #2
+      _int
+        1
+      : Int
+    )
+../semant-test/ta/undefined_class.cl:1: Class Class1 inherits from an undefined class Class3.
+Compilation halted due to static semantic errors.
+../semant-test/web/anattributenamedself.test:4: 'self' cannot be the name of an attribute.
+Compilation halted due to static semantic errors.
+#13
+_program
+  #9
+  _class
+    Main
+    IO
+    "../semant-test/web/assignment.test"
+    (
+    #2
+    _attr
+      x
+      Int
+      #2
+      _no_expr
+      : _no_type
+    #3
+    _attr
+      y
+      String
+      #3
+      _no_expr
+      : _no_type
+    #4
+    _attr
+      f
+      Foo
+      #4
+      _no_expr
+      : _no_type
+    #7
+    _method
+      main
+      Object
+      #7
+      _block
+        #6
+        _assign
+          x
+          #6
+          _int
+            3
+          : Int
+        : Int
+        #6
+        _assign
+          x
+          #6
+          _int
+            5
+          : Int
+        : Int
+        #6
+        _assign
+          y
+          #6
+          _string
+            "test"
+          : String
+        : String
+        #6
+        _assign
+          f
+          #6
+          _new
+            Foo
+          : Foo
+        : Foo
+      : Foo
+    #8
+    _method
+      foo
+      String
+      #8
+      _string
+        "test"
+      : String
+    )
+  #13
+  _class
+    Foo
+    Object
+    "../semant-test/web/assignment.test"
+    (
+    #11
+    _attr
+      x
+      Int
+      #11
+      _int
+        3
+      : Int
+    )
+../semant-test/web/assignnoconform.test:4: Type A of assigned expression does not conform to declared type B of identifier b.
+Compilation halted due to static semantic errors.
+../semant-test/web/attrbadinit.test:8: Undeclared identifier moo.
+Compilation halted due to static semantic errors.
+../semant-test/web/attroverride.test:8: Attribute moo is an attribute of an inherited class.
+Compilation halted due to static semantic errors.
+../semant-test/web/badargs1.test:5: In call of method foo, type SELF_TYPE of parameter b does not conform to declared type B.
+Compilation halted due to static semantic errors.
+../semant-test/web/badarith.test:4: non-Int arguments: Int + String
+Compilation halted due to static semantic errors.
+../semant-test/web/baddispatch.test:12: Dispatch to undefined method moo.
+Compilation halted due to static semantic errors.
+../semant-test/web/badequalitytest.test:5: Illegal comparison with a basic type.
+Compilation halted due to static semantic errors.
+../semant-test/web/badequalitytest2.test:5: Illegal comparison with a basic type.
+Compilation halted due to static semantic errors.
+../semant-test/web/badmethodcallsitself.test:4: In call of method f, type Object of parameter a does not conform to declared type Int.
+Compilation halted due to static semantic errors.
+../semant-test/web/badredefineint.test:4: Redefinition of basic class Int.
+Compilation halted due to static semantic errors.
+../semant-test/web/badstaticdispatch.test:11: Expression type SELF_TYPE does not conform to declared static dispatch type C.
+Compilation halted due to static semantic errors.
+../semant-test/web/badwhilebody.test:5: Dispatch to undefined method length.
+Compilation halted due to static semantic errors.
+../semant-test/web/badwhilecond.test:5: Loop condition does not have type Bool.
+Compilation halted due to static semantic errors.
+#4
+_program
+  #4
+  _class
+    Main
+    Object
+    "../semant-test/web/basic.test"
+    (
+    #3
+    _method
+      main
+      Object
+      #3
+      _block
+        #2
+        _dispatch
+          #2
+          _int
+            5
+          : Int
+          copy
+          (
+          )
+        : Int
+        #2
+        _dispatch
+          #2
+          _string
+            "test"
+          : String
+          copy
+          (
+          )
+        : String
+        #2
+        _dispatch
+          #2
+          _bool
+            1
+          : Bool
+          copy
+          (
+          )
+        : Bool
+        #3
+        _dispatch
+          #3
+          _string
+            "test"
+          : String
+          length
+          (
+          )
+        : Int
+      : Int
+    )
+#7
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/basicclassestree.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #7
+  _class
+    A
+    Object
+    "../semant-test/web/basicclassestree.test"
+    (
+    #4
+    _attr
+      a
+      Object
+      #4
+      _int
+        0
+      : Int
+    #5
+    _attr
+      b
+      Object
+      #5
+      _string
+        ""
+      : String
+    #6
+    _attr
+      c
+      Object
+      #6
+      _bool
+        1
+      : Bool
+    )
+../semant-test/web/caseidenticalbranch.test:4: Duplicate branch Int in case statement.
+Compilation halted due to static semantic errors.
+#97
+_program
+  #76
+  _class
+    CellularAutomaton
+    IO
+    "../semant-test/web/cells.cl.test"
+    (
+    #6
+    _attr
+      population_map
+      String
+      #6
+      _no_expr
+      : _no_type
+    #13
+    _method
+      init
+      #8
+      _formal
+        map
+        String
+      SELF_TYPE
+      #12
+      _block
+        #10
+        _assign
+          population_map
+          #10
+          _object
+            map
+          : String
+        : String
+        #11
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    #20
+    _method
+      print
+      SELF_TYPE
+      #19
+      _block
+        #17
+        _dispatch
+          #17
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #17
+          _dispatch
+            #17
+            _object
+              population_map
+            : String
+            concat
+            (
+            #17
+            _string
+              "\n"
+            : String
+            )
+          : String
+          )
+        : SELF_TYPE
+        #18
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    #24
+    _method
+      num_cells
+      Int
+      #23
+      _dispatch
+        #23
+        _object
+          population_map
+        : String
+        length
+        (
+        )
+      : Int
+    #28
+    _method
+      cell
+      #26
+      _formal
+        position
+        Int
+      String
+      #27
+      _dispatch
+        #27
+        _object
+          population_map
+        : String
+        substr
+        (
+        #27
+        _object
+          position
+        : Int
+        #27
+        _int
+          1
+        : Int
+        )
+      : String
+    #36
+    _method
+      cell_left_neighbor
+      #30
+      _formal
+        position
+        Int
+      String
+      #35
+      _cond
+        #31
+        _eq
+          #31
+          _object
+            position
+          : Int
+          #31
+          _int
+            0
+          : Int
+        : Bool
+        #32
+        _dispatch
+          #32
+          _object
+            self
+          : SELF_TYPE
+          cell
+          (
+          #32
+          _sub
+            #32
+            _dispatch
+              #32
+              _object
+                self
+              : SELF_TYPE
+              num_cells
+              (
+              )
+            : Int
+            #32
+            _int
+              1
+            : Int
+          : Int
+          )
+        : String
+        #34
+        _dispatch
+          #34
+          _object
+            self
+          : SELF_TYPE
+          cell
+          (
+          #34
+          _sub
+            #34
+            _object
+              position
+            : Int
+            #34
+            _int
+              1
+            : Int
+          : Int
+          )
+        : String
+      : String
+    #44
+    _method
+      cell_right_neighbor
+      #38
+      _formal
+        position
+        Int
+      String
+      #43
+      _cond
+        #39
+        _eq
+          #39
+          _object
+            position
+          : Int
+          #39
+          _sub
+            #39
+            _dispatch
+              #39
+              _object
+                self
+              : SELF_TYPE
+              num_cells
+              (
+              )
+            : Int
+            #39
+            _int
+              1
+            : Int
+          : Int
+        : Bool
+        #40
+        _dispatch
+          #40
+          _object
+            self
+          : SELF_TYPE
+          cell
+          (
+          #40
+          _int
+            0
+          : Int
+          )
+        : String
+        #42
+        _dispatch
+          #42
+          _object
+            self
+          : SELF_TYPE
+          cell
+          (
+          #42
+          _plus
+            #42
+            _object
+              position
+            : Int
+            #42
+            _int
+              1
+            : Int
+          : Int
+          )
+        : String
+      : String
+    #58
+    _method
+      cell_at_next_evolution
+      #48
+      _formal
+        position
+        Int
+      String
+      #57
+      _cond
+        #52
+        _eq
+          #52
+          _plus
+            #51
+            _plus
+              #49
+              _cond
+                #49
+                _eq
+                  #49
+                  _dispatch
+                    #49
+                    _object
+                      self
+                    : SELF_TYPE
+                    cell
+                    (
+                    #49
+                    _object
+                      position
+                    : Int
+                    )
+                  : String
+                  #49
+                  _string
+                    "X"
+                  : String
+                : Bool
+                #49
+                _int
+                  1
+                : Int
+                #49
+                _int
+                  0
+                : Int
+              : Int
+              #50
+              _cond
+                #50
+                _eq
+                  #50
+                  _dispatch
+                    #50
+                    _object
+                      self
+                    : SELF_TYPE
+                    cell_left_neighbor
+                    (
+                    #50
+                    _object
+                      position
+                    : Int
+                    )
+                  : String
+                  #50
+                  _string
+                    "X"
+                  : String
+                : Bool
+                #50
+                _int
+                  1
+                : Int
+                #50
+                _int
+                  0
+                : Int
+              : Int
+            : Int
+            #51
+            _cond
+              #51
+              _eq
+                #51
+                _dispatch
+                  #51
+                  _object
+                    self
+                  : SELF_TYPE
+                  cell_right_neighbor
+                  (
+                  #51
+                  _object
+                    position
+                  : Int
+                  )
+                : String
+                #51
+                _string
+                  "X"
+                : String
+              : Bool
+              #51
+              _int
+                1
+              : Int
+              #51
+              _int
+                0
+              : Int
+            : Int
+          : Int
+          #52
+          _int
+            1
+          : Int
+        : Bool
+        #54
+        _string
+          "X"
+        : String
+        #56
+        _string
+          "."
+        : String
+      : String
+    #75
+    _method
+      evolve
+      SELF_TYPE
+      #74
+      _let
+        position
+        Int
+        #61
+        _no_expr
+        : _no_type
+        #74
+        _let
+          num
+          Int
+          #62
+          _dispatch
+            #62
+            _object
+              self
+            : SELF_TYPE
+            num_cells
+            (
+            )
+          : Int
+          #74
+          _let
+            temp
+            String
+            #63
+            _no_expr
+            : _no_type
+            #73
+            _block
+              #70
+              _loop
+                #65
+                _lt
+                  #65
+                  _object
+                    position
+                  : Int
+                  #65
+                  _object
+                    num
+                  : Int
+                : Bool
+                #69
+                _block
+                  #67
+                  _assign
+                    temp
+                    #67
+                    _dispatch
+                      #67
+                      _object
+                        temp
+                      : String
+                      concat
+                      (
+                      #67
+                      _dispatch
+                        #67
+                        _object
+                          self
+                        : SELF_TYPE
+                        cell_at_next_evolution
+                        (
+                        #67
+                        _object
+                          position
+                        : Int
+                        )
+                      : String
+                      )
+                    : String
+                  : String
+                  #68
+                  _assign
+                    position
+                    #68
+                    _plus
+                      #68
+                      _object
+                        position
+                      : Int
+                      #68
+                      _int
+                        1
+                      : Int
+                    : Int
+                  : Int
+                : Int
+              : Object
+              #71
+              _assign
+                population_map
+                #71
+                _object
+                  temp
+                : String
+              : String
+              #72
+              _object
+                self
+              : SELF_TYPE
+            : SELF_TYPE
+          : SELF_TYPE
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+  #97
+  _class
+    Main
+    Object
+    "../semant-test/web/cells.cl.test"
+    (
+    #79
+    _attr
+      cells
+      CellularAutomaton
+      #79
+      _no_expr
+      : _no_type
+    #96
+    _method
+      main
+      SELF_TYPE
+      #95
+      _block
+        #83
+        _assign
+          cells
+          #83
+          _dispatch
+            #83
+            _new
+              CellularAutomaton
+            : CellularAutomaton
+            init
+            (
+            #83
+            _string
+              "         X         "
+            : String
+            )
+          : CellularAutomaton
+        : CellularAutomaton
+        #84
+        _dispatch
+          #84
+          _object
+            cells
+          : CellularAutomaton
+          print
+          (
+          )
+        : CellularAutomaton
+        #93
+        _let
+          countdown
+          Int
+          #85
+          _int
+            20
+          : Int
+          #92
+          _loop
+            #86
+            _lt
+              #86
+              _int
+                0
+              : Int
+              #86
+              _object
+                countdown
+              : Int
+            : Bool
+            #91
+            _block
+              #88
+              _dispatch
+                #88
+                _object
+                  cells
+                : CellularAutomaton
+                evolve
+                (
+                )
+              : CellularAutomaton
+              #89
+              _dispatch
+                #89
+                _object
+                  cells
+                : CellularAutomaton
+                print
+                (
+                )
+              : CellularAutomaton
+              #90
+              _assign
+                countdown
+                #90
+                _sub
+                  #90
+                  _object
+                    countdown
+                  : Int
+                  #90
+                  _int
+                    1
+                  : Int
+                : Int
+              : Int
+            : Int
+          : Object
+        : Object
+        #94
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+#19
+_program
+  #7
+  _class
+    A
+    Object
+    "../semant-test/web/classes.test"
+    (
+    #3
+    _attr
+      a
+      Int
+      #3
+      _int
+        0
+      : Int
+    #4
+    _attr
+      d
+      Int
+      #4
+      _int
+        1
+      : Int
+    #5
+    _method
+      f
+      Int
+      #5
+      _assign
+        a
+        #5
+        _plus
+          #5
+          _object
+            a
+          : Int
+          #5
+          _object
+            d
+          : Int
+        : Int
+      : Int
+    )
+  #13
+  _class
+    B
+    A
+    "../semant-test/web/classes.test"
+    (
+    #10
+    _attr
+      b
+      Int
+      #10
+      _int
+        2
+      : Int
+    #11
+    _method
+      f
+      Int
+      #11
+      _object
+        a
+      : Int
+    #12
+    _method
+      g
+      Int
+      #12
+      _assign
+        a
+        #12
+        _sub
+          #12
+          _object
+            a
+          : Int
+          #12
+          _object
+            b
+          : Int
+        : Int
+      : Int
+    )
+  #18
+  _class
+    C
+    A
+    "../semant-test/web/classes.test"
+    (
+    #16
+    _attr
+      c
+      Int
+      #16
+      _int
+        3
+      : Int
+    #17
+    _method
+      h
+      Int
+      #17
+      _assign
+        a
+        #17
+        _sub
+          #17
+          _object
+            a
+          : Int
+          #17
+          _object
+            c
+          : Int
+        : Int
+      : Int
+    )
+  #19
+  _class
+    Main
+    Object
+    "../semant-test/web/classes.test"
+    (
+    #19
+    _method
+      main
+      Int
+      #19
+      _int
+        6
+      : Int
+    )
+#12
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/compare.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #3
+  _class
+    A
+    Object
+    "../semant-test/web/compare.test"
+    (
+    )
+  #4
+  _class
+    B
+    Object
+    "../semant-test/web/compare.test"
+    (
+    )
+  #12
+  _class
+    C
+    Object
+    "../semant-test/web/compare.test"
+    (
+    #6
+    _attr
+      a
+      A
+      #6
+      _no_expr
+      : _no_type
+    #7
+    _attr
+      b
+      B
+      #7
+      _no_expr
+      : _no_type
+    #11
+    _method
+      compare
+      Bool
+      #11
+      _eq
+        #10
+        _object
+          a
+        : A
+        #11
+        _object
+          b
+        : B
+      : Bool
+    )
+#5
+_program
+  #4
+  _class
+    A
+    Object
+    "../semant-test/web/comparisons.test"
+    (
+    #2
+    _method
+      foo
+      #2
+      _formal
+        a
+        A
+      Bool
+      #2
+      _block
+        #2
+        _lt
+          #2
+          _int
+            6
+          : Int
+          #2
+          _int
+            7
+          : Int
+        : Bool
+        #2
+        _leq
+          #2
+          _int
+            6
+          : Int
+          #2
+          _int
+            7
+          : Int
+        : Bool
+        #2
+        _comp
+          #2
+          _bool
+            1
+          : Bool
+        : Bool
+      : Bool
+    )
+  #5
+  _class
+    Main
+    Object
+    "../semant-test/web/comparisons.test"
+    (
+    #5
+    _method
+      main
+      Int
+      #5
+      _int
+        6
+      : Int
+    )
+#7
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/cycleinmethods.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #7
+  _class
+    A
+    Object
+    "../semant-test/web/cycleinmethods.test"
+    (
+    #4
+    _method
+      f
+      #4
+      _formal
+        a
+        Int
+      Int
+      #4
+      _dispatch
+        #4
+        _object
+          self
+        : SELF_TYPE
+        g
+        (
+        #4
+        _int
+          0
+        : Int
+        )
+      : Int
+    #5
+    _method
+      g
+      #5
+      _formal
+        a
+        Int
+      Int
+      #5
+      _dispatch
+        #5
+        _object
+          self
+        : SELF_TYPE
+        h
+        (
+        #5
+        _int
+          0
+        : Int
+        )
+      : Int
+    #6
+    _method
+      h
+      #6
+      _formal
+        a
+        Int
+      Int
+      #6
+      _dispatch
+        #6
+        _object
+          self
+        : SELF_TYPE
+        f
+        (
+        #6
+        _int
+          0
+        : Int
+        )
+      : Int
+    )
+#18
+_program
+  #3
+  _class
+    Main
+    Object
+    "../semant-test/web/dispatch.test"
+    (
+    #2
+    _method
+      main
+      Object
+      #2
+      _int
+        42
+      : Int
+    )
+  #10
+  _class
+    A
+    Object
+    "../semant-test/web/dispatch.test"
+    (
+    #8
+    _method
+      foo
+      #6
+      _formal
+        a
+        Int
+      #6
+      _formal
+        b
+        B
+      #6
+      _formal
+        c
+        A
+      #6
+      _formal
+        d
+        B
+      A
+      #8
+      _object
+        self
+      : SELF_TYPE
+    )
+  #18
+  _class
+    B
+    A
+    "../semant-test/web/dispatch.test"
+    (
+    #17
+    _method
+      moo
+      A
+      #17
+      _let
+        b
+        B
+        #15
+        _new
+          B
+        : B
+        #16
+        _dispatch
+          #16
+          _object
+            self
+          : SELF_TYPE
+          foo
+          (
+          #16
+          _int
+            4
+          : Int
+          #16
+          _object
+            b
+          : B
+          #16
+          _object
+            b
+          : B
+          #16
+          _object
+            b
+          : B
+          )
+        : A
+      : A
+    )
+../semant-test/web/dupformals.test:3: Formal parameter x is multiply defined.
+../semant-test/web/dupformals.test:3: Formal parameter x is multiply defined.
+Compilation halted due to static semantic errors.
+#5
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/expressionblock.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #5
+  _class
+    A
+    Object
+    "../semant-test/web/expressionblock.test"
+    (
+    #4
+    _method
+      foo
+      Int
+      #4
+      _block
+        #4
+        _object
+          self
+        : SELF_TYPE
+        #4
+        _string
+          "hello"
+        : String
+        #4
+        _bool
+          1
+        : Bool
+        #4
+        _int
+          1
+        : Int
+      : Int
+    )
+#12
+_program
+  #5
+  _class
+    A
+    B
+    "../semant-test/web/forwardinherits.test"
+    (
+    #3
+    _attr
+      foo
+      Int
+      #3
+      _no_expr
+      : _no_type
+    )
+  #11
+  _class
+    B
+    Object
+    "../semant-test/web/forwardinherits.test"
+    (
+    #9
+    _attr
+      bar
+      Int
+      #9
+      _no_expr
+      : _no_type
+    )
+  #12
+  _class
+    Main
+    Object
+    "../semant-test/web/forwardinherits.test"
+    (
+    #12
+    _method
+      main
+      Int
+      #12
+      _int
+        6
+      : Int
+    )
+#62
+_program
+  #14
+  _class
+    Foo
+    Bazz
+    "../semant-test/web/hairyscary.cl.test"
+    (
+    #8
+    _attr
+      a
+      Razz
+      #8
+      _typcase
+        #4
+        _object
+          self
+        : SELF_TYPE
+        #5
+        _branch
+          n
+          Razz
+          #5
+          _new
+            Bar
+          : Bar
+        #6
+        _branch
+          n
+          Foo
+          #6
+          _new
+            Razz
+          : Razz
+        #7
+        _branch
+          n
+          Bar
+          #7
+          _object
+            n
+          : Bar
+      : Razz
+    #10
+    _attr
+      b
+      Int
+      #10
+      _plus
+        #10
+        _plus
+          #10
+          _plus
+            #10
+            _dispatch
+              #10
+              _object
+                a
+              : Razz
+              doh
+              (
+              )
+            : Int
+            #10
+            _dispatch
+              #10
+              _object
+                g
+              : Foo
+              doh
+              (
+              )
+            : Int
+          : Int
+          #10
+          _dispatch
+            #10
+            _object
+              self
+            : SELF_TYPE
+            doh
+            (
+            )
+          : Int
+        : Int
+        #10
+        _dispatch
+          #10
+          _object
+            self
+          : SELF_TYPE
+          printh
+          (
+          )
+        : Int
+      : Int
+    #12
+    _method
+      doh
+      Int
+      #12
+      _let
+        i
+        Int
+        #12
+        _object
+          h
+        : Int
+        #12
+        _block
+          #12
+          _assign
+            h
+            #12
+            _plus
+              #12
+              _object
+                h
+              : Int
+              #12
+              _int
+                2
+              : Int
+            : Int
+          : Int
+          #12
+          _object
+            i
+          : Int
+        : Int
+      : Int
+    )
+  #21
+  _class
+    Bar
+    Razz
+    "../semant-test/web/hairyscary.cl.test"
+    (
+    #18
+    _attr
+      c
+      Int
+      #18
+      _dispatch
+        #18
+        _object
+          self
+        : SELF_TYPE
+        doh
+        (
+        )
+      : Int
+    #20
+    _attr
+      d
+      Object
+      #20
+      _dispatch
+        #20
+        _object
+          self
+        : SELF_TYPE
+        printh
+        (
+        )
+      : Int
+    )
+  #33
+  _class
+    Razz
+    Foo
+    "../semant-test/web/hairyscary.cl.test"
+    (
+    #29
+    _attr
+      e
+      Bar
+      #29
+      _typcase
+        #26
+        _object
+          self
+        : SELF_TYPE
+        #27
+        _branch
+          n
+          Razz
+          #27
+          _new
+            Bar
+          : Bar
+        #28
+        _branch
+          n
+          Bar
+          #28
+          _object
+            n
+          : Bar
+      : Bar
+    #31
+    _attr
+      f
+      Int
+      #31
+      _plus
+        #31
+        _plus
+          #31
+          _plus
+            #31
+            _plus
+              #31
+              _static_dispatch
+                #31
+                _object
+                  a
+                : Razz
+                Bazz
+                doh
+                (
+                )
+              : Int
+              #31
+              _dispatch
+                #31
+                _object
+                  g
+                : Foo
+                doh
+                (
+                )
+              : Int
+            : Int
+            #31
+            _dispatch
+              #31
+              _object
+                e
+              : Bar
+              doh
+              (
+              )
+            : Int
+          : Int
+          #31
+          _dispatch
+            #31
+            _object
+              self
+            : SELF_TYPE
+            doh
+            (
+            )
+          : Int
+        : Int
+        #31
+        _dispatch
+          #31
+          _object
+            self
+          : SELF_TYPE
+          printh
+          (
+          )
+        : Int
+      : Int
+    )
+  #51
+  _class
+    Bazz
+    IO
+    "../semant-test/web/hairyscary.cl.test"
+    (
+    #37
+    _attr
+      h
+      Int
+      #37
+      _int
+        1
+      : Int
+    #44
+    _attr
+      g
+      Foo
+      #44
+      _typcase
+        #39
+        _object
+          self
+        : SELF_TYPE
+        #40
+        _branch
+          n
+          Bazz
+          #40
+          _new
+            Foo
+          : Foo
+        #41
+        _branch
+          n
+          Razz
+          #41
+          _new
+            Bar
+          : Bar
+        #42
+        _branch
+          n
+          Foo
+          #42
+          _new
+            Razz
+          : Razz
+        #43
+        _branch
+          n
+          Bar
+          #43
+          _object
+            n
+          : Bar
+      : Foo
+    #46
+    _attr
+      i
+      Object
+      #46
+      _dispatch
+        #46
+        _object
+          self
+        : SELF_TYPE
+        printh
+        (
+        )
+      : Int
+    #48
+    _method
+      printh
+      Int
+      #48
+      _block
+        #48
+        _dispatch
+          #48
+          _object
+            self
+          : SELF_TYPE
+          out_int
+          (
+          #48
+          _object
+            h
+          : Int
+          )
+        : SELF_TYPE
+        #48
+        _int
+          0
+        : Int
+      : Int
+    #50
+    _method
+      doh
+      Int
+      #50
+      _let
+        i
+        Int
+        #50
+        _object
+          h
+        : Int
+        #50
+        _block
+          #50
+          _assign
+            h
+            #50
+            _plus
+              #50
+              _object
+                h
+              : Int
+              #50
+              _int
+                1
+              : Int
+            : Int
+          : Int
+          #50
+          _object
+            i
+          : Int
+        : Int
+      : Int
+    )
+  #62
+  _class
+    Main
+    Object
+    "../semant-test/web/hairyscary.cl.test"
+    (
+    #55
+    _attr
+      a
+      Bazz
+      #55
+      _new
+        Bazz
+      : Bazz
+    #56
+    _attr
+      b
+      Foo
+      #56
+      _new
+        Foo
+      : Foo
+    #57
+    _attr
+      c
+      Razz
+      #57
+      _new
+        Razz
+      : Razz
+    #58
+    _attr
+      d
+      Bar
+      #58
+      _new
+        Bar
+      : Bar
+    #60
+    _method
+      main
+      String
+      #60
+      _string
+        "do nothing"
+      : String
+    )
+#7
+_program
+  #7
+  _class
+    Main
+    IO
+    "../semant-test/web/if.test"
+    (
+    #2
+    _attr
+      x
+      Int
+      #2
+      _no_expr
+      : _no_type
+    #5
+    _method
+      main
+      Object
+      #5
+      _block
+        #4
+        _cond
+          #4
+          _eq
+            #4
+            _plus
+              #4
+              _let
+                x
+                Int
+                #4
+                _int
+                  5
+                : Int
+                #4
+                _plus
+                  #4
+                  _object
+                    x
+                  : Int
+                  #4
+                  _int
+                    3
+                  : Int
+                : Int
+              : Int
+              #4
+              _int
+                3
+              : Int
+            : Int
+            #4
+            _int
+              9
+            : Int
+          : Bool
+          #4
+          _int
+            3
+          : Int
+          #4
+          _dispatch
+            #4
+            _object
+              self
+            : SELF_TYPE
+            foo
+            (
+            )
+          : String
+        : Object
+      : Object
+    #6
+    _method
+      foo
+      String
+      #6
+      _string
+        "test"
+      : String
+    )
+#17
+_program
+  #9
+  _class
+    A
+    Object
+    "../semant-test/web/inheritsObject.test"
+    (
+    #3
+    _attr
+      foo
+      Int
+      #3
+      _no_expr
+      : _no_type
+    #7
+    _method
+      main
+      Int
+      #6
+      _int
+        6
+      : Int
+    )
+  #15
+  _class
+    B
+    Object
+    "../semant-test/web/inheritsObject.test"
+    (
+    #13
+    _attr
+      bar
+      Int
+      #13
+      _no_expr
+      : _no_type
+    )
+  #17
+  _class
+    Main
+    Object
+    "../semant-test/web/inheritsObject.test"
+    (
+    #17
+    _method
+      main
+      Int
+      #17
+      _int
+        6
+      : Int
+    )
+../semant-test/web/inheritsbool.test:9: Class B cannot inherit class Bool.
+Compilation halted due to static semantic errors.
+../semant-test/web/inheritsselftype.test:1: Class Main cannot inherit class SELF_TYPE.
+Compilation halted due to static semantic errors.
+../semant-test/web/inheritsstring.test:9: Class B cannot inherit class String.
+Compilation halted due to static semantic errors.
+#6
+_program
+  #6
+  _class
+    Main
+    IO
+    "../semant-test/web/initwithself.test"
+    (
+    #2
+    _attr
+      x
+      Main
+      #2
+      _object
+        self
+      : SELF_TYPE
+    #5
+    _method
+      main
+      Object
+      #5
+      _block
+        #4
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+#10
+_program
+  #10
+  _class
+    Main
+    IO
+    "../semant-test/web/io.test"
+    (
+    #2
+    _attr
+      x
+      Int
+      #2
+      _no_expr
+      : _no_type
+    #3
+    _attr
+      y
+      String
+      #3
+      _no_expr
+      : _no_type
+    #9
+    _method
+      main
+      Object
+      #9
+      _block
+        #5
+        _dispatch
+          #5
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #5
+          _string
+            "test"
+          : String
+          )
+        : SELF_TYPE
+        #6
+        _dispatch
+          #6
+          _object
+            self
+          : SELF_TYPE
+          out_int
+          (
+          #6
+          _int
+            5
+          : Int
+          )
+        : SELF_TYPE
+        #7
+        _assign
+          y
+          #7
+          _dispatch
+            #7
+            _object
+              self
+            : SELF_TYPE
+            in_string
+            (
+            )
+          : String
+        : String
+        #8
+        _assign
+          x
+          #8
+          _dispatch
+            #8
+            _object
+              self
+            : SELF_TYPE
+            in_int
+            (
+            )
+          : Int
+        : Int
+      : Int
+    )
+#6
+_program
+  #6
+  _class
+    Main
+    IO
+    "../semant-test/web/isvoid.test"
+    (
+    #2
+    _attr
+      x
+      Bool
+      #2
+      _no_expr
+      : _no_type
+    #5
+    _method
+      main
+      Object
+      #5
+      _block
+        #4
+        _isvoid
+          #4
+          _bool
+            1
+          : Bool
+        : Bool
+        #4
+        _isvoid
+          #4
+          _bool
+            0
+          : Bool
+        : Bool
+        #4
+        _isvoid
+          #4
+          _object
+            x
+          : Bool
+        : Bool
+      : Bool
+    )
+../semant-test/web/letbadinit.test:4: Inferred type A of initialization of x does not conform to identifier's declared type B.
+Compilation halted due to static semantic errors.
+#5
+_program
+  #5
+  _class
+    Main
+    IO
+    "../semant-test/web/letinit.test"
+    (
+    #4
+    _method
+      main
+      Object
+      #4
+      _block
+        #3
+        _let
+          x
+          Int
+          #3
+          _int
+            5
+          : Int
+          #3
+          _object
+            x
+          : Int
+        : Int
+      : Int
+    )
+#5
+_program
+  #5
+  _class
+    Main
+    IO
+    "../semant-test/web/letnoinit.test"
+    (
+    #4
+    _method
+      main
+      Object
+      #4
+      _block
+        #3
+        _let
+          x
+          Int
+          #3
+          _no_expr
+          : _no_type
+          #3
+          _object
+            x
+          : Int
+        : Int
+      : Int
+    )
+../semant-test/web/letself.test:3: 'self' cannot be bound in a 'let' expression.
+Compilation halted due to static semantic errors.
+#7
+_program
+  #7
+  _class
+    Main
+    IO
+    "../semant-test/web/letselftype.test"
+    (
+    #6
+    _method
+      main
+      Object
+      #6
+      _block
+        #5
+        _let
+          y
+          SELF_TYPE
+          #4
+          _let
+            x
+            SELF_TYPE
+            #4
+            _no_expr
+            : _no_type
+            #4
+            _object
+              x
+            : SELF_TYPE
+          : SELF_TYPE
+          #5
+          _object
+            y
+          : SELF_TYPE
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+#6
+_program
+  #6
+  _class
+    Main
+    IO
+    "../semant-test/web/letshadows.test"
+    (
+    #2
+    _attr
+      x
+      Int
+      #2
+      _no_expr
+      : _no_type
+    #5
+    _method
+      main
+      Object
+      #5
+      _block
+        #4
+        _let
+          x
+          String
+          #4
+          _string
+            "test"
+          : String
+          #4
+          _dispatch
+            #4
+            _object
+              x
+            : String
+            length
+            (
+            )
+          : Int
+        : Int
+      : Int
+    )
+#138
+_program
+  #53
+  _class
+    List
+    Object
+    "../semant-test/web/list.cl.test"
+    (
+    #29
+    _method
+      isNil
+      Bool
+      #29
+      _bool
+        1
+      : Bool
+    #35
+    _method
+      head
+      Int
+      #35
+      _block
+        #35
+        _dispatch
+          #35
+          _object
+            self
+          : SELF_TYPE
+          abort
+          (
+          )
+        : Object
+        #35
+        _int
+          0
+        : Int
+      : Int
+    #40
+    _method
+      tail
+      List
+      #40
+      _block
+        #40
+        _dispatch
+          #40
+          _object
+            self
+          : SELF_TYPE
+          abort
+          (
+          )
+        : Object
+        #40
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    #51
+    _method
+      cons
+      #49
+      _formal
+        i
+        Int
+      List
+      #50
+      _dispatch
+        #50
+        _new
+          Cons
+        : Cons
+        init
+        (
+        #50
+        _object
+          i
+        : Int
+        #50
+        _object
+          self
+        : SELF_TYPE
+        )
+      : List
+    )
+  #90
+  _class
+    Cons
+    List
+    "../semant-test/web/list.cl.test"
+    (
+    #72
+    _attr
+      car
+      Int
+      #72
+      _no_expr
+      : _no_type
+    #74
+    _attr
+      cdr
+      List
+      #74
+      _no_expr
+      : _no_type
+    #76
+    _method
+      isNil
+      Bool
+      #76
+      _bool
+        0
+      : Bool
+    #78
+    _method
+      head
+      Int
+      #78
+      _object
+        car
+      : Int
+    #80
+    _method
+      tail
+      List
+      #80
+      _object
+        cdr
+      : List
+    #88
+    _method
+      init
+      #82
+      _formal
+        i
+        Int
+      #82
+      _formal
+        rest
+        List
+      List
+      #87
+      _block
+        #84
+        _assign
+          car
+          #84
+          _object
+            i
+          : Int
+        : Int
+        #85
+        _assign
+          cdr
+          #85
+          _object
+            rest
+          : List
+        : List
+        #86
+        _object
+          self
+        : SELF_TYPE
+      : SELF_TYPE
+    )
+  #138
+  _class
+    Main
+    IO
+    "../semant-test/web/list.cl.test"
+    (
+    #102
+    _attr
+      mylist
+      List
+      #102
+      _no_expr
+      : _no_type
+    #115
+    _method
+      print_list
+      #107
+      _formal
+        l
+        List
+      Object
+      #114
+      _cond
+        #108
+        _dispatch
+          #108
+          _object
+            l
+          : List
+          isNil
+          (
+          )
+        : Bool
+        #108
+        _dispatch
+          #108
+          _object
+            self
+          : SELF_TYPE
+          out_string
+          (
+          #108
+          _string
+            "\n"
+          : String
+          )
+        : SELF_TYPE
+        #113
+        _block
+          #110
+          _dispatch
+            #110
+            _object
+              self
+            : SELF_TYPE
+            out_int
+            (
+            #110
+            _dispatch
+              #110
+              _object
+                l
+              : List
+              head
+              (
+              )
+            : Int
+            )
+          : SELF_TYPE
+          #111
+          _dispatch
+            #111
+            _object
+              self
+            : SELF_TYPE
+            out_string
+            (
+            #111
+            _string
+              " "
+            : String
+            )
+          : SELF_TYPE
+          #112
+          _dispatch
+            #112
+            _object
+              self
+            : SELF_TYPE
+            print_list
+            (
+            #112
+            _dispatch
+              #112
+              _object
+                l
+              : List
+              tail
+              (
+              )
+            : List
+            )
+          : Object
+        : Object
+      : Object
+    #136
+    _method
+      main
+      Object
+      #135
+      _block
+        #128
+        _assign
+          mylist
+          #128
+          _dispatch
+            #128
+            _dispatch
+              #128
+              _dispatch
+                #128
+                _dispatch
+                  #128
+                  _dispatch
+                    #128
+                    _new
+                      List
+                    : List
+                    cons
+                    (
+                    #128
+                    _int
+                      1
+                    : Int
+                    )
+                  : List
+                  cons
+                  (
+                  #128
+                  _int
+                    2
+                  : Int
+                  )
+                : List
+                cons
+                (
+                #128
+                _int
+                  3
+                : Int
+                )
+              : List
+              cons
+              (
+              #128
+              _int
+                4
+              : Int
+              )
+            : List
+            cons
+            (
+            #128
+            _int
+              5
+            : Int
+            )
+          : List
+        : List
+        #134
+        _loop
+          #129
+          _comp
+            #129
+            _dispatch
+              #129
+              _object
+                mylist
+              : List
+              isNil
+              (
+              )
+            : Bool
+          : Bool
+          #133
+          _block
+            #131
+            _dispatch
+              #131
+              _object
+                self
+              : SELF_TYPE
+              print_list
+              (
+              #131
+              _object
+                mylist
+              : List
+              )
+            : Object
+            #132
+            _assign
+              mylist
+              #132
+              _dispatch
+                #132
+                _object
+                  mylist
+                : List
+                tail
+                (
+                )
+              : List
+            : List
+          : List
+        : Object
+      : Object
+    )
+../semant-test/web/lubtest.test:18: Inferred return type Z of method h does not conform to declared return type B.
+Compilation halted due to static semantic errors.
+#7
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/methodcallsitself.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #7
+  _class
+    A
+    Object
+    "../semant-test/web/methodcallsitself.test"
+    (
+    #4
+    _method
+      f
+      Int
+      #4
+      _dispatch
+        #4
+        _object
+          self
+        : SELF_TYPE
+        f
+        (
+        )
+      : Int
+    #5
+    _method
+      g
+      #5
+      _formal
+        a
+        Int
+      Int
+      #5
+      _dispatch
+        #5
+        _object
+          self
+        : SELF_TYPE
+        g
+        (
+        #5
+        _dispatch
+          #5
+          _object
+            self
+          : SELF_TYPE
+          g
+          (
+          #5
+          _dispatch
+            #5
+            _object
+              self
+            : SELF_TYPE
+            f
+            (
+            )
+          : Int
+          )
+        : Int
+        )
+      : Int
+    #6
+    _method
+      h
+      #6
+      _formal
+        a
+        Int
+      #6
+      _formal
+        b
+        Int
+      Int
+      #6
+      _dispatch
+        #6
+        _object
+          self
+        : SELF_TYPE
+        h
+        (
+        #6
+        _dispatch
+          #6
+          _object
+            self
+          : SELF_TYPE
+          h
+          (
+          #6
+          _int
+            0
+          : Int
+          #6
+          _int
+            0
+          : Int
+          )
+        : Int
+        #6
+        _dispatch
+          #6
+          _object
+            self
+          : SELF_TYPE
+          h
+          (
+          #6
+          _dispatch
+            #6
+            _object
+              self
+            : SELF_TYPE
+            f
+            (
+            )
+          : Int
+          #6
+          _dispatch
+            #6
+            _object
+              self
+            : SELF_TYPE
+            f
+            (
+            )
+          : Int
+          )
+        : Int
+        )
+      : Int
+    )
+#6
+_program
+  #1
+  _class
+    A
+    Object
+    "../semant-test/web/methodnameclash.test"
+    (
+    #1
+    _attr
+      x
+      Int
+      #1
+      _no_expr
+      : _no_type
+    #1
+    _attr
+      y
+      String
+      #1
+      _no_expr
+      : _no_type
+    )
+  #3
+  _class
+    L
+    A
+    "../semant-test/web/methodnameclash.test"
+    (
+    #3
+    _method
+      foo
+      Int
+      #3
+      _object
+        x
+      : Int
+    )
+  #4
+  _class
+    R
+    A
+    "../semant-test/web/methodnameclash.test"
+    (
+    #4
+    _method
+      foo
+      String
+      #4
+      _object
+        y
+      : String
+    )
+  #6
+  _class
+    Main
+    Object
+    "../semant-test/web/methodnameclash.test"
+    (
+    #6
+    _method
+      main
+      Int
+      #6
+      _dispatch
+        #6
+        _new
+          L
+        : L
+        foo
+        (
+        )
+      : Int
+    )
+../semant-test/web/missingclass.test:5: Class A inherits from an undefined class D.
+Compilation halted due to static semantic errors.
+#7
+_program
+  #7
+  _class
+    Main
+    IO
+    "../semant-test/web/neg.test"
+    (
+    #2
+    _attr
+      x
+      Bool
+      #2
+      _no_expr
+      : _no_type
+    #5
+    _method
+      main
+      Object
+      #5
+      _block
+        #4
+        _neg
+          #4
+          _int
+            7
+          : Int
+        : Int
+        #4
+        _neg
+          #4
+          _dispatch
+            #4
+            _object
+              self
+            : SELF_TYPE
+            foo
+            (
+            )
+          : Int
+        : Int
+      : Int
+    #6
+    _method
+      foo
+      Int
+      #6
+      _int
+        4
+      : Int
+    )
+#8
+_program
+  #7
+  _class
+    A
+    Object
+    "../semant-test/web/newselftype.test"
+    (
+    #3
+    _attr
+      bar
+      Int
+      #3
+      _dispatch
+        #3
+        _object
+          self
+        : SELF_TYPE
+        foo
+        (
+        #3
+        _new
+          SELF_TYPE
+        : SELF_TYPE
+        )
+      : Int
+    #5
+    _method
+      foo
+      #5
+      _formal
+        a
+        A
+      Int
+      #5
+      _neg
+        #5
+        _int
+          7
+        : Int
+      : Int
+    )
+  #8
+  _class
+    Main
+    Object
+    "../semant-test/web/newselftype.test"
+    (
+    #8
+    _method
+      main
+      Int
+      #8
+      _int
+        6
+      : Int
+    )
+Class Main is not defined.
+Compilation halted due to static semantic errors.
+#6
+_program
+  #5
+  _class
+    A
+    Object
+    "../semant-test/web/objectdispatchabort.test"
+    (
+    #3
+    _method
+      foo
+      Object
+      #3
+      _dispatch
+        #3
+        _new
+          Object
+        : Object
+        abort
+        (
+        )
+      : Object
+    )
+  #6
+  _class
+    Main
+    Object
+    "../semant-test/web/objectdispatchabort.test"
+    (
+    #6
+    _method
+      main
+      Int
+      #6
+      _int
+        6
+      : Int
+    )
+../semant-test/web/outofscope.test:3: Undeclared identifier x.
+Compilation halted due to static semantic errors.
+#9
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/overriderenamearg.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #5
+  _class
+    D
+    Object
+    "../semant-test/web/overriderenamearg.test"
+    (
+    #4
+    _method
+      inky
+      #4
+      _formal
+        b
+        Int
+      Object
+      #4
+      _int
+        1
+      : Int
+    )
+  #9
+  _class
+    E
+    D
+    "../semant-test/web/overriderenamearg.test"
+    (
+    #8
+    _method
+      inky
+      #8
+      _formal
+        c
+        Int
+      Object
+      #8
+      _int
+        1
+      : Int
+    )
+#12
+_program
+  #5
+  _class
+    A
+    Object
+    "../semant-test/web/overridingmethod.test"
+    (
+    #3
+    _method
+      foo
+      Int
+      #3
+      _int
+        6
+      : Int
+    )
+  #10
+  _class
+    B
+    A
+    "../semant-test/web/overridingmethod.test"
+    (
+    #9
+    _method
+      foo
+      Int
+      #9
+      _int
+        7
+      : Int
+    )
+  #12
+  _class
+    Main
+    Object
+    "../semant-test/web/overridingmethod.test"
+    (
+    #12
+    _method
+      main
+      Int
+      #12
+      _int
+        6
+      : Int
+    )
+#9
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/overridingmethod2.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #5
+  _class
+    A
+    Object
+    "../semant-test/web/overridingmethod2.test"
+    (
+    #4
+    _method
+      inky
+      #4
+      _formal
+        a
+        Int
+      #4
+      _formal
+        b
+        String
+      #4
+      _formal
+        c
+        A
+      #4
+      _formal
+        d
+        Bool
+      Int
+      #4
+      _object
+        a
+      : Int
+    )
+  #9
+  _class
+    B
+    A
+    "../semant-test/web/overridingmethod2.test"
+    (
+    #8
+    _method
+      inky
+      #8
+      _formal
+        a
+        Int
+      #8
+      _formal
+        b
+        String
+      #8
+      _formal
+        c
+        A
+      #8
+      _formal
+        d
+        Bool
+      Int
+      #8
+      _plus
+        #8
+        _object
+          a
+        : Int
+        #8
+        _int
+          1
+        : Int
+      : Int
+    )
+#9
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/overridingmethod3.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #5
+  _class
+    A
+    Object
+    "../semant-test/web/overridingmethod3.test"
+    (
+    #4
+    _method
+      inky
+      SELF_TYPE
+      #4
+      _object
+        self
+      : SELF_TYPE
+    )
+  #9
+  _class
+    B
+    A
+    "../semant-test/web/overridingmethod3.test"
+    (
+    #8
+    _method
+      inky
+      SELF_TYPE
+      #8
+      _new
+        SELF_TYPE
+      : SELF_TYPE
+    )
+../semant-test/web/overridingmethod4.test:12: In redefined method inky, parameter type C is different from original type B
+Compilation halted due to static semantic errors.
+../semant-test/web/redefinedclass.test:9: Class A was previously defined.
+Compilation halted due to static semantic errors.
+../semant-test/web/redefinedobject.test:6: Redefinition of basic class Object.
+Compilation halted due to static semantic errors.
+../semant-test/web/returntypenoexist.test:2: Undefined return type PinkElephant in method main.
+../semant-test/web/returntypenoexist.test:2: 'new' used with undefined class PinkElephant.
+Compilation halted due to static semantic errors.
+#9
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/scopes.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #9
+  _class
+    A
+    Object
+    "../semant-test/web/scopes.test"
+    (
+    #4
+    _attr
+      x
+      Int
+      #4
+      _no_expr
+      : _no_type
+    #6
+    _method
+      f
+      #6
+      _formal
+        x
+        A
+      String
+      #6
+      _string
+        "ab"
+      : String
+    #7
+    _method
+      g
+      #7
+      _formal
+        x
+        Bool
+      A
+      #7
+      _object
+        self
+      : SELF_TYPE
+    #8
+    _method
+      h
+      Object
+      #8
+      _let
+        x
+        String
+        #8
+        _dispatch
+          #8
+          _object
+            self
+          : SELF_TYPE
+          f
+          (
+          #8
+          _let
+            x
+            Bool
+            #8
+            _no_expr
+            : _no_type
+            #8
+            _dispatch
+              #8
+              _object
+                self
+              : SELF_TYPE
+              g
+              (
+              #8
+              _object
+                x
+              : Bool
+              )
+            : A
+          : A
+          )
+        : String
+        #8
+        _assign
+          x
+          #8
+          _string
+            "ab"
+          : String
+        : String
+      : String
+    )
+../semant-test/web/self-assignment.test:5: Cannot assign to 'self'.
+Compilation halted due to static semantic errors.
+../semant-test/web/selfinformalparameter.test:5: 'self' cannot be the name of a formal parameter.
+Compilation halted due to static semantic errors.
+../semant-test/web/selftypebadreturn.test:4: Inferred return type A of method foo does not conform to declared return type SELF_TYPE.
+Compilation halted due to static semantic errors.
+../semant-test/web/selftypeparameterposition.test:4: Formal parameter x cannot have type SELF_TYPE.
+Compilation halted due to static semantic errors.
+../semant-test/web/selftyperedeclared.test:6: Redefinition of basic class SELF_TYPE.
+Compilation halted due to static semantic errors.
+../semant-test/web/signaturechange.test:9: Incompatible number of formal parameters in redefined method foo.
+Compilation halted due to static semantic errors.
+#3
+_program
+  #3
+  _class
+    Main
+    Object
+    "../semant-test/web/simplearith.test"
+    (
+    #2
+    _method
+      main
+      Object
+      #2
+      _block
+        #2
+        _plus
+          #2
+          _int
+            5
+          : Int
+          #2
+          _int
+            4
+          : Int
+        : Int
+        #2
+        _sub
+          #2
+          _int
+            5
+          : Int
+          #2
+          _int
+            4
+          : Int
+        : Int
+        #2
+        _mul
+          #2
+          _int
+            3
+          : Int
+          #2
+          _int
+            2
+          : Int
+        : Int
+        #2
+        _divide
+          #2
+          _int
+            3
+          : Int
+          #2
+          _int
+            2
+          : Int
+        : Int
+      : Int
+    )
+#9
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/simplecase.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #9
+  _class
+    A
+    Object
+    "../semant-test/web/simplecase.test"
+    (
+    #4
+    _attr
+      moo
+      Object
+      #4
+      _no_expr
+      : _no_type
+    #8
+    _method
+      boo
+      Object
+      #8
+      _block
+        #8
+        _typcase
+          #5
+          _object
+            moo
+          : Object
+          #5
+          _branch
+            i
+            Int
+            #5
+            _object
+              i
+            : Int
+          #6
+          _branch
+            b
+            Bool
+            #6
+            _object
+              b
+            : Bool
+          #7
+          _branch
+            s
+            String
+            #7
+            _object
+              s
+            : String
+        : Object
+      : Object
+    )
+#18
+_program
+  #4
+  _class
+    Main
+    Object
+    "../semant-test/web/staticdispatch.test"
+    (
+    #2
+    _attr
+      b
+      B
+      #2
+      _new
+        B
+      : B
+    #3
+    _method
+      main
+      Object
+      #3
+      _static_dispatch
+        #3
+        _object
+          b
+        : B
+        A
+        foo
+        (
+        #3
+        _int
+          5
+        : Int
+        #3
+        _object
+          b
+        : B
+        #3
+        _object
+          b
+        : B
+        #3
+        _object
+          b
+        : B
+        )
+      : Int
+    )
+  #11
+  _class
+    A
+    Object
+    "../semant-test/web/staticdispatch.test"
+    (
+    #9
+    _method
+      foo
+      #7
+      _formal
+        a
+        Int
+      #7
+      _formal
+        b
+        B
+      #7
+      _formal
+        c
+        A
+      #7
+      _formal
+        d
+        B
+      Int
+      #8
+      _int
+        5
+      : Int
+    )
+  #18
+  _class
+    B
+    A
+    "../semant-test/web/staticdispatch.test"
+    (
+    #17
+    _method
+      foo
+      #15
+      _formal
+        a
+        Int
+      #15
+      _formal
+        b
+        B
+      #15
+      _formal
+        c
+        A
+      #15
+      _formal
+        d
+        B
+      Int
+      #16
+      _int
+        6
+      : Int
+    )
+#7
+_program
+  #7
+  _class
+    Main
+    Object
+    "../semant-test/web/stringtest.test"
+    (
+    #6
+    _method
+      main
+      Object
+      #6
+      _block
+        #3
+        _dispatch
+          #3
+          _string
+            "test"
+          : String
+          length
+          (
+          )
+        : Int
+        #4
+        _dispatch
+          #4
+          _string
+            "test"
+          : String
+          substr
+          (
+          #4
+          _int
+            0
+          : Int
+          #4
+          _int
+            1
+          : Int
+          )
+        : String
+        #5
+        _dispatch
+          #5
+          _string
+            "test"
+          : String
+          concat
+          (
+          #5
+          _string
+            " me"
+          : String
+          )
+        : String
+      : String
+    )
+#19
+_program
+  #9
+  _class
+    A
+    Object
+    "../semant-test/web/subtypemethodreturn.test"
+    (
+    #7
+    _method
+      foo
+      A
+      #7
+      _let
+        x
+        A
+        #3
+        _no_expr
+        : _no_type
+        #6
+        _block
+          #4
+          _assign
+            x
+            #4
+            _new
+              A
+            : A
+          : A
+          #5
+          _dispatch
+            #5
+            _object
+              x
+            : A
+            foo
+            (
+            )
+          : A
+        : A
+      : A
+    )
+  #17
+  _class
+    B
+    A
+    "../semant-test/web/subtypemethodreturn.test"
+    (
+    #15
+    _method
+      foo
+      A
+      #15
+      _object
+        self
+      : SELF_TYPE
+    )
+  #19
+  _class
+    Main
+    Object
+    "../semant-test/web/subtypemethodreturn.test"
+    (
+    #19
+    _method
+      main
+      Int
+      #19
+      _int
+        6
+      : Int
+    )
+#14
+_program
+  #1
+  _class
+    Main
+    Object
+    "../semant-test/web/trickyatdispatch.test"
+    (
+    #1
+    _method
+      main
+      Int
+      #1
+      _int
+        0
+      : Int
+    )
+  #5
+  _class
+    A
+    Object
+    "../semant-test/web/trickyatdispatch.test"
+    (
+    #4
+    _method
+      inky
+      Int
+      #4
+      _int
+        1
+      : Int
+    )
+  #9
+  _class
+    B
+    A
+    "../semant-test/web/trickyatdispatch.test"
+    (
+    #8
+    _method
+      binky
+      String
+      #8
+      _string
+        "hello"
+      : String
+    )
+  #14
+  _class
+    C
+    Object
+    "../semant-test/web/trickyatdispatch.test"
+    (
+    #12
+    _attr
+      b
+      B
+      #12
+      _no_expr
+      : _no_type
+    #13
+    _method
+      winky
+      Int
+      #13
+      _static_dispatch
+        #13
+        _object
+          b
+        : B
+        B
+        inky
+        (
+        )
+      : Int
+    )
+../semant-test/web/trickyatdispatch2.test:10: Expression type A does not conform to declared static dispatch type B.
+../semant-test/web/trickyatdispatch2.test:10: Inferred return type Object of method binky does not conform to declared return type Int.
+Compilation halted due to static semantic errors.

@@ -75,10 +75,10 @@ void dump_with_types(ostream&,int);
 virtual Symbol get_name() = 0;		       \
 virtual Symbol get_type() = 0; \
 virtual void dump_with_types(ostream&,int) = 0; \
-virtual void check_feature_name_type( Class_ c, Symbol target) = 0; \
-virtual void check_feature_duplicate(Class_ c, Symbol target ) = 0; \
-virtual void check_feature_method_formals( Class_ c, Symbol target  ) = 0; \
-virtual void check_feature_inheritance( Class_ c, Symbol target ) = 0; \
+virtual bool check_feature_name_type( Class_ c, Symbol target) = 0; \
+virtual bool check_feature_duplicate(Class_ c, Symbol target ) = 0; \
+virtual bool check_feature_method_formals( Class_ c, Symbol target  ) = 0; \
+virtual bool check_feature_inheritance( Class_ c, Symbol target ) = 0; \
 virtual void add_feature( Symbol s  ) = 0; \
 virtual Formals get_formals() = 0;
 
@@ -87,10 +87,10 @@ virtual Formals get_formals() = 0;
 Symbol get_name(); \
 Symbol get_type(); \
 void dump_with_types(ostream&,int);    \
-void check_feature_name_type( Class_ c, Symbol target ); \
-void check_feature_duplicate( Class_ c, Symbol target ); \
-void check_feature_method_formals( Class_ c, Symbol target ); \
-void check_feature_inheritance( Class_ c, Symbol target  ); \
+bool check_feature_name_type( Class_ c, Symbol target ); \
+bool check_feature_duplicate( Class_ c, Symbol target ); \
+bool check_feature_method_formals( Class_ c, Symbol target ); \
+bool check_feature_inheritance( Class_ c, Symbol target  ); \
 void add_feature( Symbol s  ); \
 Formals get_formals();
 
