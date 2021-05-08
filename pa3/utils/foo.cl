@@ -6,7 +6,7 @@ class Main inherits IO {
             out_string("\n");
         }
     };
-    second( a:Bool, b:InvalidType ): InvalidType {  b+1  };
+    second( a:Bool, b:InvalidType ): InvalidType {  1+1  };
     third( a:Bool, b:SELF_TYPE ): InvalidType {  b+1  };
     four( a:Bool, self:Int ): SELF_TYPE {  self  };
     five( a:Bool, a:Int ): Int {  a  };

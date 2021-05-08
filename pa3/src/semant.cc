@@ -232,22 +232,22 @@ void method_class::check_type( Class_ c ) {
 }
 
 Symbol assign_class::infer_type( Class_ c) {
-
+return Object;
 }
 Symbol static_dispatch_class::infer_type( Class_ c) {
-
+return Object;
 }
 Symbol dispatch_class::infer_type( Class_ c ){
-
+return Object;
 }
 Symbol cond_class::infer_type( Class_ c) {
-
+return Object;
 }
 Symbol loop_class::infer_type( Class_ c ) {
-
+return Object;
 }
 Symbol typcase_class::infer_type( Class_ c ){
-
+    return Object;
 }
 Symbol block_class::infer_type( Class_ c ) {
     int idx;
@@ -257,7 +257,7 @@ Symbol block_class::infer_type( Class_ c ) {
     return type;
 }
 Symbol let_class::infer_type( Class_ c ){
-
+    return Object;
 }
 Symbol plus_class::infer_type( Class_ c ) {
     Symbol t1, t2;
@@ -328,7 +328,7 @@ Symbol int_const_class::infer_type( Class_ c){ return set_type(Int)->type; }
 Symbol bool_const_class::infer_type( Class_ c){ return set_type(Bool)->type; }
 Symbol string_const_class::infer_type( Class_ c){ return set_type(Str)->type; }
 Symbol new__class::infer_type( Class_ c ){
-    if( type_name = SELF_TYPE) { return set_type(SELF_TYPE)->type; }
+    if( type_name == SELF_TYPE) { return set_type(SELF_TYPE)->type; }
     if( CT->get_class(type_name) != NULL ) { return set_type(type_name)->type; }
     // TODO call error
     return set_type(Object)->type;  
@@ -891,6 +891,7 @@ void ClassTable::check_types( ) {
             features->more(idx2);
             idx2 = features->next(idx2) ) {     // for each feature
 
+            f = features->nth(idx2);
             f->check_type( c );
         }
     }
