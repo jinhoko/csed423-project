@@ -43,6 +43,10 @@ typedef struct _OMTable {
         ot->enterscope();
         mt->enterscope();
     }
+    void exitscope() {
+        ot->enterscope();
+        mt->exitscope();
+    }
 
     void add_attr( Symbol name, Symbol type ) {
       ot->addid( name, type );

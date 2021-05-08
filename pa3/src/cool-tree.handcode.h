@@ -74,25 +74,29 @@ void dump_with_types(ostream&,int);
 #define Feature_EXTRAS                                        \
 virtual Symbol get_name() = 0;		       \
 virtual Symbol get_type() = 0; \
+virtual Expression get_expr() = 0; \
 virtual void dump_with_types(ostream&,int) = 0; \
 virtual bool check_feature_name_type( Class_ c, Symbol target) = 0; \
 virtual bool check_feature_duplicate(Class_ c, Symbol target ) = 0; \
 virtual bool check_feature_method_formals( Class_ c, Symbol target  ) = 0; \
 virtual bool check_feature_inheritance( Class_ c, Symbol target ) = 0; \
 virtual void add_feature( Symbol s  ) = 0; \
-virtual Formals get_formals() = 0;
+virtual Formals get_formals() = 0; \
+virtual void check_type(Class_ c ) = 0;
 
 
 #define Feature_SHARED_EXTRAS                                       \
 Symbol get_name(); \
 Symbol get_type(); \
+Expression get_expr(); \
 void dump_with_types(ostream&,int);    \
 bool check_feature_name_type( Class_ c, Symbol target ); \
 bool check_feature_duplicate( Class_ c, Symbol target ); \
 bool check_feature_method_formals( Class_ c, Symbol target ); \
 bool check_feature_inheritance( Class_ c, Symbol target  ); \
 void add_feature( Symbol s  ); \
-Formals get_formals();
+Formals get_formals(); \
+void check_type( Class_ c );
 
 #define method_EXTRAS
 
@@ -124,9 +128,11 @@ Symbol get_type() { return type; }           \
 Expression set_type(Symbol s) { type = s; return this; } \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
-Expression_class() { type = (Symbol) NULL; }
+Expression_class() { type = (Symbol) NULL; } \
+virtual Symbol infer_type( Class_ c); 
 
 #define Expression_SHARED_EXTRAS           \
-void dump_with_types(ostream&,int); 
+void dump_with_types(ostream&,int); \
+Symbol infer_type( Class_ c );
 
 #endif

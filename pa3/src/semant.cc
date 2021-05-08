@@ -92,7 +92,6 @@ Symbol class__class::get_name() { return name; }
 Symbol class__class::get_parent() { return parent; }
 Features class__class::get_features() { return features; }
 
-
 Symbol attr_class::get_name() { return name; }
 Symbol method_class::get_name() { return name; }
 Symbol attr_class::get_type() { return type_decl; }
@@ -101,6 +100,8 @@ Formals method_class::get_formals() { return formals; }
 Formals attr_class::get_formals() { return NULL; }
 Symbol formal_class::get_type() { return type_decl; }
 Symbol formal_class::get_name() { return name; }
+Expression attr_class::get_expr() { return init; }
+Expression method_class::get_expr() { return expr; }
 
 void attr_class::add_feature( Symbol c ) { if( get_name() != self ) CT->environment[c]->add_attr(get_name(), this->type_decl); }
 void method_class::add_feature( Symbol c ) { CT->environment[c]->add_method(get_name(), this); }
@@ -212,9 +213,139 @@ bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
 
 }
 
-// void attr_class::check_type() {
+void attr_class::check_type( Class_ c ) {
 
-// } // TODO start writing here
+    CT->environment[c->get_name()]->enterscope();
+    // add formals (except one has name self)
+    // infer type
+    Symbol type = get_expr()->infer_type(c);
+    // check if type ok
+        // if error print error
+
+    CT->environment[c->get_name()]->exitscope();
+}
+void method_class::check_type( Class_ c ) {
+
+    Symbol type = get_expr()->infer_type(c);
+    // check if type ok
+        // if error print error
+}
+
+Symbol assign_class::infer_type( Class_ c) {
+
+}
+Symbol static_dispatch_class::infer_type( Class_ c) {
+
+}
+Symbol dispatch_class::infer_type( Class_ c ){
+
+}
+Symbol cond_class::infer_type( Class_ c) {
+
+}
+Symbol loop_class::infer_type( Class_ c ) {
+
+}
+Symbol typcase_class::infer_type( Class_ c ){
+
+}
+Symbol block_class::infer_type( Class_ c ) {
+    int idx;
+    for (idx = body->first(); body->more(idx); idx = body->next(idx)) {
+        type = body->nth(idx)->infer_type(c);
+    }
+    return type;
+}
+Symbol let_class::infer_type( Class_ c ){
+
+}
+Symbol plus_class::infer_type( Class_ c ) {
+    Symbol t1, t2;
+    t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    // TODO error
+    return set_type(Object)->type;
+}
+Symbol sub_class::infer_type( Class_ c ){
+    Symbol t1, t2;
+    t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    // TODO error
+    return set_type(Object)->type;
+}
+Symbol mul_class::infer_type( Class_ c) {
+    Symbol t1, t2;
+    t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    // TODO error
+    return set_type(Object)->type;
+}
+Symbol divide_class::infer_type( Class_ c ){
+    Symbol t1, t2;
+    t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    // TODO error
+    return set_type(Object)->type;
+}
+Symbol neg_class::infer_type( Class_ c){
+    type = e1->infer_type(c);
+    if( type == Int ) { return type; }
+    // TODO error
+    return set_type(Object)->type;
+}
+Symbol lt_class::infer_type( Class_ c){
+    Symbol t1, t2;
+    t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    // TODO error
+    return set_type(Object)->type;
+}
+Symbol eq_class::infer_type( Class_ c){
+    Symbol t1, t2;
+    t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+    bool isPrimitive = t1 == Int || t2 == Int || t1 == Bool || t2 == Bool || t1 == Str || t2 == Str;
+    bool isTypeDifferent = t1 != t2;
+    if ( isPrimitive && isTypeDifferent ) {
+        // TODO error
+        return set_type(Object)->type;
+    }
+    return set_type(Bool)->type;
+}
+Symbol leq_class::infer_type( Class_ c){
+    Symbol t1, t2;
+    t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    // TODO error ; error msg same for +-/* and leq and lt
+    return set_type(Object)->type;
+}
+Symbol comp_class::infer_type( Class_ c){ 
+    type = e1->infer_type(c);
+    if( type == Bool ) { return type; }
+    // TODO error
+    return set_type(Object)->type;
+}
+Symbol int_const_class::infer_type( Class_ c){ return set_type(Int)->type; }
+Symbol bool_const_class::infer_type( Class_ c){ return set_type(Bool)->type; }
+Symbol string_const_class::infer_type( Class_ c){ return set_type(Str)->type; }
+Symbol new__class::infer_type( Class_ c ){
+    if( type_name = SELF_TYPE) { return set_type(SELF_TYPE)->type; }
+    if( CT->get_class(type_name) != NULL ) { return set_type(type_name)->type; }
+    // TODO call error
+    return set_type(Object)->type;  
+}
+Symbol isvoid_class::infer_type( Class_ c){ e1->infer_type( c ); type = Bool; return type; }
+Symbol no_expr_class::infer_type( Class_ c){ type = No_type; return type; }
+Symbol object_class::infer_type( Class_ c){
+    type = CT->environment[c->get_name()]->ot->lookup(name);
+    if( type != NULL ){ return type; }
+    // TODO call error
+    return set_type(Object)->type; 
+}
+
+///////////////////////////
+// ClassTable definition
+///////////////////////////
+
 
 void ClassTable::install_basic_classes() {
 
@@ -686,7 +817,6 @@ void ClassTable::init_symboltable() {
 
 Class_ ClassTable::get_class( Symbol s ) {
     Class_ c = class_map->lookup(s);
-    assert( c != NULL );
     return c;
 }
 
@@ -744,7 +874,26 @@ void ClassTable::check_types( ) {
     // TODO expression 계산하고 마지막에 attr이나 method type과 비교할때 해당 type이 유효하지 않으면 마지막 비교과정 생략하면 됨. 이미 유효하지 않다고 에러 뽑았기 때문.
     // 즉, 맞지 않는다 = 두 type이 유효한데, 서로 호한 안된다 이고, 나머지 경우는 에러 이미 나왔기때문에 silent!
 
-    // method는 formal introduce할때 self로 생긴거 빼고 다 넣어버리면 됨
+    // TODO method는 formal introduce할때 self 빼고 다 넣어버리면 됨
+    int idx, idx2;
+    Class_ c;
+    Features features;
+    Feature f;
+
+    for( idx = user_classes->first();
+        user_classes->more(idx);
+        idx = user_classes->next(idx) ) {       // for each user-defined class
+
+        c = user_classes->nth(idx);
+        features = c->get_features();
+        
+        for( idx2 = features->first();
+            features->more(idx2);
+            idx2 = features->next(idx2) ) {     // for each feature
+
+            f->check_type( c );
+        }
+    }
 }
 
 void ClassTable::check_parent_symboltable_build( Symbol s_c, Symbol target ) {
@@ -863,9 +1012,3 @@ void program_class::semant()
     halt_if_error(classtable);
     return;
 }
-
-
-// Scopechecking-related functions
-
-// Typechecking-related functions
-
