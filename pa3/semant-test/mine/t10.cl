@@ -3,5 +3,5 @@ class M {
 }
 
 class Main inherits M {
-    
+    main() : Int {};
 };

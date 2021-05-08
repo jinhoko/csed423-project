@@ -99,7 +99,7 @@ public:
   int num_nodes();
 
   // check entrypoint
-  void check_entrypoint(); // TODO when?
+  void check_entrypoint();
 
   // check name_scope & fill symbol table
   Env environment;           // environment map
@@ -114,9 +114,10 @@ public:
 
   // check types
   void check_types();
+  Symbol get_lub( Symbol t1, Symbol t2, Class_ c);
+  bool is_poset( Symbol t1 , Symbol t2, Class_ c );
 
   // all error functions
-  // TODO check error messages
   void printerr_prevdef( Class_ c1, Symbol c2 );
   void printerr_redefine_reserved( Class_ c1, Symbol c2);
   void printerr_inherit_base( Class_ c1, Symbol c2, Symbol c3);
@@ -141,6 +142,23 @@ public:
   void printerr_method_multiple_formal( Class_ c1, Feature f, Symbol name, Symbol target );
   void printerr_method_formal_selftype( Class_ c1, Feature f, Symbol name, Symbol target   ) ;
   void printerr_method_formal_selfname( Class_ c1, Feature f, Symbol target );
+  void printerr_method_formal_wrongtype( Class_ c1, Feature f, Symbol t, Symbol fname, Symbol target  );
+
+  // errors when typechecking
+  void printerr_arith_nonint( Class_ c1, Expression e, Symbol t1, Symbol t2 );
+  void printerr_neg_nonint( Class_ c1, Expression e, Symbol t);
+  void printerr_new_undefined( Class_ c1, Expression e, Symbol type );
+  void printerr_eq_basictype( Class_ c1, Expression e  );
+  void printerr_undeclared_id( Class_ c1, Expression e, Symbol name );
+  void printerr_comp( Class_ c1, Expression e, Symbol type);
+  void printerr_loop_notbool( Class_ c1, Expression e);
+  void printerr_if_notbool( Class_ c1, Expression e);
+  void printerr_assign_self( Class_ c1, Expression e);
+  void printerr_assign_mismatch( Class_ c1, Expression e, Symbol t1, Symbol t2, Symbol name);
+  void printerr_assign_undeclared( Class_ c1, Expression e, Symbol name);
+
+  void printerr_method_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2);
+  void printerr_attr_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2 );
 };
 
 

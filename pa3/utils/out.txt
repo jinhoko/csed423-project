@@ -5153,3 +5153,29 @@ _program
 ../semant-test/web/trickyatdispatch2.test:10: Expression type A does not conform to declared static dispatch type B.
 ../semant-test/web/trickyatdispatch2.test:10: Inferred return type Object of method binky does not conform to declared return type Int.
 Compilation halted due to static semantic errors.
+../semant-test/mine/t1.cl:15: Class Main was previously defined.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t2.cl:46: Class AA, or an ancestor of AA, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:40: Class Bad, or an ancestor of Bad, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:33: Class D, or an ancestor of D, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:27: Class C, or an ancestor of C, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:21: Class B, or an ancestor of B, is involved in an inheritance cycle.
+../semant-test/mine/t2.cl:15: Class A, or an ancestor of A, is involved in an inheritance cycle.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t3.cl:21: Class B, or an ancestor of B, is involved in an inheritance cycle.
+../semant-test/mine/t3.cl:15: Class A, or an ancestor of A, is involved in an inheritance cycle.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t4.cl:45: Class G inherits from an undefined class A.
+../semant-test/mine/t4.cl:27: Class D cannot inherit class Bool.
+../semant-test/mine/t4.cl:21: Class C cannot inherit class Int.
+../semant-test/mine/t4.cl:15: Class B cannot inherit class SELF_TYPE.
+Compilation halted due to static semantic errors.
+../semant-test/mine/t5.cl:5: Redefinition of basic class Object.
+../semant-test/mine/t5.cl:11: Redefinition of basic class IO.
+../semant-test/mine/t5.cl:17: Redefinition of basic class Int.
+../semant-test/mine/t5.cl:23: Redefinition of basic class Bool.
+../semant-test/mine/t5.cl:29: Redefinition of basic class String.
+../semant-test/mine/t5.cl:41: Class G inherits from an undefined class A.
+../semant-test/mine/t5.cl:35: Class B cannot inherit class String.
+Compilation halted due to static semantic errors.
+

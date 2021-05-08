@@ -108,7 +108,7 @@ void method_class::add_feature( Symbol c ) { CT->environment[c]->add_method(get_
 
 bool attr_class::check_feature_name_type( Class_ c, Symbol target ) { 
     bool isAttrNameSelf = name == self;
-    bool isAttrTypeDefined = CT->is_class_exists_in_program( type_decl ) || type_decl == prim_slot;
+    bool isAttrTypeDefined = CT->is_class_exists_in_program( type_decl ) || type_decl == prim_slot || type_decl == SELF_TYPE;
 
     if( isAttrNameSelf ) { CT->printerr_attr_name_self( c, this, target ); }
     if( !isAttrTypeDefined ) { CT->printerr_attr_type_undefined( c, this, type_decl, name, target ); }
@@ -141,9 +141,7 @@ bool method_class::check_feature_method_formals( Class_ c, Symbol target ) {
     // use temporary symboltable for duplicate check
     SymbolTable<Symbol, noData>* fTable = new SymbolTable<Symbol, noData>();
     fTable->enterscope();
-    bool isFormalNameSelf;
-    bool isFormalTypeSelf;
-    bool isFormalDuplicated;
+    bool isFormalNameSelf; bool isFormalTypeSelf; bool isFormalDuplicated; bool isFormalWrongType;
     bool isErrorFound = false;
     Formal f; Symbol fname; Symbol ftype;
     int idx;
@@ -158,11 +156,13 @@ bool method_class::check_feature_method_formals( Class_ c, Symbol target ) {
         isFormalDuplicated = fTable->lookup( f->get_name() ) != NULL;
         isFormalNameSelf = fname == self;
         isFormalTypeSelf = ftype == SELF_TYPE;
+        isFormalWrongType = !( CT->is_class_exists_in_program( ftype ) ) && ftype != SELF_TYPE;
         
-        if( isFormalDuplicated || isFormalNameSelf || isFormalTypeSelf ) { isErrorFound = true; }
+        if( isFormalDuplicated || isFormalNameSelf || isFormalTypeSelf || isFormalWrongType ) { isErrorFound = true; }
         if( isFormalDuplicated ){ CT->printerr_method_multiple_formal( c, this, fname, target); }
         if ( isFormalNameSelf ) { CT->printerr_method_formal_selfname( c, this, target ); }
         if ( isFormalTypeSelf ) { CT->printerr_method_formal_selftype( c, this, fname, target); }
+        if ( isFormalWrongType ) { CT->printerr_method_formal_wrongtype( c, this, ftype, fname, target ); }
 
         fTable->addid( fname, CT->_garbage );
     }
@@ -215,38 +215,73 @@ bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
 
 void attr_class::check_type( Class_ c ) {
 
-    CT->environment[c->get_name()]->enterscope();
-    // add formals (except one has name self)
-    // infer type
-    Symbol type = get_expr()->infer_type(c);
-    // check if type ok
-        // if error print error
-
-    CT->environment[c->get_name()]->exitscope();
+    Symbol t1 = init->infer_type(c);
+    if( ! CT->is_class_exists_in_program(type_decl) && type_decl!=SELF_TYPE ) { return; } // for invalid type_decl, pass type inference
+    if( ! (CT->is_poset(t1, type_decl, c)) ) {
+        CT->printerr_attr_mismatch( c, this, t1, type_decl);
+    }    
 }
 void method_class::check_type( Class_ c ) {
 
-    Symbol type = get_expr()->infer_type(c);
-    // check if type ok
-        // if error print error
+    CT->environment[c->get_name()]->enterscope();
+    // add formals (except one has name self)
+    Formal f;
+    int idx;
+    for( idx = get_formals()->first();
+        get_formals()->more(idx);
+        idx = get_formals()->next(idx) ) {
+
+        f = get_formals()->nth(idx);
+        if( f->get_name() == self ) { continue; }
+        if( CT->environment[c->get_name()]->ot->lookup(f->get_name()) != NULL ) { continue; }   // pass duplicates
+        CT->environment[c->get_name()]->add_attr(f->get_name(), f->get_type());                 // add formal
+    }
+    // infer type
+    Symbol t0_ = get_expr()->infer_type(c);
+    if( CT->is_class_exists_in_program(return_type) || return_type==SELF_TYPE ) {     // for invalid type_decl, pass type inference
+        if( ! (CT->is_poset(t0_, return_type, c)) ) {   
+            CT->printerr_method_mismatch( c, this, t0_, return_type);
+        }
+    } 
+    CT->environment[c->get_name()]->exitscope();
 }
 
 Symbol assign_class::infer_type( Class_ c) {
-return Object;
+    if( name == self ) { CT->printerr_assign_self(c, this); }
+    Symbol t = CT->environment[c->get_name()]->ot->lookup(name);
+    if( t == NULL ) {
+        CT->printerr_assign_undeclared( c, this, name);
+        return set_type(Object)->type; // TODO check 여기서 return 하는거 맞을지?
+    }
+    Symbol t_ = expr->infer_type(c);
+    if( CT->is_poset(t_, t, c) ) { return set_type(t_)->type; }
+    CT->printerr_assign_mismatch( c, this, t_, t, name );
+    return Object;
 }
 Symbol static_dispatch_class::infer_type( Class_ c) {
-return Object;
+    // TODO not yet
+    return Object;
 }
 Symbol dispatch_class::infer_type( Class_ c ){
-return Object;
+    // TODO not yet
+    return Object;
 }
 Symbol cond_class::infer_type( Class_ c) {
-return Object;
+    if( pred->infer_type(c) != Bool ) {
+        CT->printerr_if_notbool(c, this);
+    }
+    Symbol lub = CT->get_lub( then_exp->infer_type(c), else_exp->infer_type(c), c );
+    return set_type(lub)->type;
 }
 Symbol loop_class::infer_type( Class_ c ) {
-return Object;
+    if( pred->infer_type(c) != Bool ){
+        CT->printerr_loop_notbool(c, this);
+    }
+    body->infer_type(c);
+    return set_type(Object)->type;
 }
 Symbol typcase_class::infer_type( Class_ c ){
+    // TODO not yet
     return Object;
 }
 Symbol block_class::infer_type( Class_ c ) {
@@ -257,47 +292,48 @@ Symbol block_class::infer_type( Class_ c ) {
     return type;
 }
 Symbol let_class::infer_type( Class_ c ){
+    // TODO not yet
     return Object;
 }
 Symbol plus_class::infer_type( Class_ c ) {
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
-    // TODO error
+    CT->printerr_arith_nonint( c, this, t1, t2 );
     return set_type(Object)->type;
 }
 Symbol sub_class::infer_type( Class_ c ){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
-    // TODO error
+    CT->printerr_arith_nonint( c, this, t1, t2 );
     return set_type(Object)->type;
 }
 Symbol mul_class::infer_type( Class_ c) {
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
-    // TODO error
+    CT->printerr_arith_nonint( c, this, t1, t2 );
     return set_type(Object)->type;
 }
 Symbol divide_class::infer_type( Class_ c ){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
-    // TODO error
+    CT->printerr_arith_nonint( c, this, t1, t2 );
     return set_type(Object)->type;
 }
 Symbol neg_class::infer_type( Class_ c){
     type = e1->infer_type(c);
     if( type == Int ) { return type; }
-    // TODO error
+    CT->printerr_neg_nonint( c, this, type );
     return set_type(Object)->type;
 }
 Symbol lt_class::infer_type( Class_ c){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
-    // TODO error
+    CT->printerr_arith_nonint( c, this, t1, t2 );
     return set_type(Object)->type;
 }
 Symbol eq_class::infer_type( Class_ c){
@@ -306,7 +342,7 @@ Symbol eq_class::infer_type( Class_ c){
     bool isPrimitive = t1 == Int || t2 == Int || t1 == Bool || t2 == Bool || t1 == Str || t2 == Str;
     bool isTypeDifferent = t1 != t2;
     if ( isPrimitive && isTypeDifferent ) {
-        // TODO error
+        CT->printerr_eq_basictype( c, this );
         return set_type(Object)->type;
     }
     return set_type(Bool)->type;
@@ -315,13 +351,13 @@ Symbol leq_class::infer_type( Class_ c){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
-    // TODO error ; error msg same for +-/* and leq and lt
+    CT->printerr_arith_nonint( c, this, t1, t2 );
     return set_type(Object)->type;
 }
 Symbol comp_class::infer_type( Class_ c){ 
     type = e1->infer_type(c);
     if( type == Bool ) { return type; }
-    // TODO error
+    CT->printerr_comp( c, this, type);
     return set_type(Object)->type;
 }
 Symbol int_const_class::infer_type( Class_ c){ return set_type(Int)->type; }
@@ -330,7 +366,7 @@ Symbol string_const_class::infer_type( Class_ c){ return set_type(Str)->type; }
 Symbol new__class::infer_type( Class_ c ){
     if( type_name == SELF_TYPE) { return set_type(SELF_TYPE)->type; }
     if( CT->get_class(type_name) != NULL ) { return set_type(type_name)->type; }
-    // TODO call error
+    CT->printerr_new_undefined( c, this, type_name );
     return set_type(Object)->type;  
 }
 Symbol isvoid_class::infer_type( Class_ c){ e1->infer_type( c ); type = Bool; return type; }
@@ -338,7 +374,7 @@ Symbol no_expr_class::infer_type( Class_ c){ type = No_type; return type; }
 Symbol object_class::infer_type( Class_ c){
     type = CT->environment[c->get_name()]->ot->lookup(name);
     if( type != NULL ){ return type; }
-    // TODO call error
+    CT->printerr_undeclared_id( c, this, name);
     return set_type(Object)->type; 
 }
 
@@ -568,7 +604,54 @@ void ClassTable::printerr_method_formal_selfname( Class_ c1, Feature f, Symbol t
     if( _is_printerr_available(c1, target))
         semant_error( c1->get_filename(), f ) << "'self' cannot be the name of a formal parameter.\n";
 }
+void ClassTable::printerr_method_formal_wrongtype( Class_ c1, Feature f, Symbol t, Symbol fname, Symbol target ){
+    if( _is_printerr_available(c1, target))
+        semant_error( c1->get_filename(), f ) << "Class " << t->get_string() << " of formal parameter " << fname->get_string() << " is undefined.\n";
+}
 
+/////
+
+void ClassTable::printerr_arith_nonint( Class_ c1, Expression e, Symbol t1, Symbol t2 ){
+    semant_error( c1->get_filename(), e ) << "non-Int arguments: " << t1->get_string()<< " + "<<t2->get_string() << "\n";
+}
+void ClassTable::printerr_neg_nonint( Class_ c1, Expression e, Symbol t){
+    semant_error( c1->get_filename(), e ) << "non-Int argument: " << t->get_string()<< ".\n";
+}
+void ClassTable::printerr_new_undefined( Class_ c1, Expression e, Symbol type ){
+    semant_error( c1->get_filename(), e ) << "'new' used with undefined class " << type->get_string() << ".\n";
+}
+void ClassTable::printerr_eq_basictype( Class_ c1, Expression e  ){
+    semant_error( c1->get_filename(), e ) << "Illegal comparison with a basic type.\n";
+}
+void ClassTable::printerr_undeclared_id( Class_ c1, Expression e, Symbol name ){
+    semant_error( c1->get_filename(), e ) << "Undeclared identifier " << name->get_string() << ".\n";
+}
+void ClassTable::printerr_comp( Class_ c1, Expression e, Symbol type){
+    semant_error( c1->get_filename(), e ) << "Argument of 'not' has type "<< type->get_string() << " instead of Bool.\n";
+}
+void ClassTable::printerr_loop_notbool( Class_ c1, Expression e){
+    semant_error( c1->get_filename(), e ) << "Loop condition does not have type Bool.\n";
+}
+void ClassTable::printerr_if_notbool( Class_ c1, Expression e){
+    semant_error( c1->get_filename(), e ) << "Predicate of 'if' does not have type Bool.\n";
+}
+void ClassTable::printerr_assign_self( Class_ c1, Expression e){
+    semant_error( c1->get_filename(), e ) << "Cannot assign to 'self'.\n";
+}
+void ClassTable::printerr_assign_mismatch( Class_ c1, Expression e, Symbol t1, Symbol t2, Symbol name){
+    semant_error( c1->get_filename(), e ) << "Type " << t1->get_string() << " of assigned expression does not conform to declared type " << t2->get_string() << " of identifier " << name->get_string() << ".\n";
+}
+void ClassTable::printerr_assign_undeclared( Class_ c1, Expression e, Symbol name){
+    semant_error( c1->get_filename(), e ) << "Assignment to undeclared variable "<< name->get_string() << ".\n";
+}
+
+void ClassTable::printerr_method_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2){
+    semant_error( c1->get_filename(), f ) << "Inferred return type " << t1->get_string() << " of method " << f->get_name()->get_string()<< " does not conform to declared return type " << t2->get_string() << ".\n";
+}
+void ClassTable::printerr_attr_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2 ){
+    semant_error( c1->get_filename(), f ) << "Inferred type " << t1->get_string() << " of initialization of attribute " << f->get_name()->get_string() << " does not conform to declared type " << t2->get_string() << ".\n";
+}
+// 
 ////////////////////////////////////////////////////////////////////
 //
 // Extending ClassTable function definitions
@@ -865,16 +948,10 @@ void ClassTable::check_class_symboltable_build( Class_ c, Symbol target ) {
         
     }
     //semant_error() << std::endl; // TODO del
-
-
 }
 
-void ClassTable::check_types( ) {
+void ClassTable::check_types() {
 
-    // TODO expression 계산하고 마지막에 attr이나 method type과 비교할때 해당 type이 유효하지 않으면 마지막 비교과정 생략하면 됨. 이미 유효하지 않다고 에러 뽑았기 때문.
-    // 즉, 맞지 않는다 = 두 type이 유효한데, 서로 호한 안된다 이고, 나머지 경우는 에러 이미 나왔기때문에 silent!
-
-    // TODO method는 formal introduce할때 self 빼고 다 넣어버리면 됨
     int idx, idx2;
     Class_ c;
     Features features;
@@ -895,6 +972,58 @@ void ClassTable::check_types( ) {
             f->check_type( c );
         }
     }
+}
+
+Symbol ClassTable::get_lub( Symbol t1, Symbol t2, Class_ c ){
+
+   if( t1 = t2 ) { return t1; }                         // if equal, return one
+   if( t1 == SELF_TYPE || t2 == SELF_TYPE ) {           // set SELF_TYPE with actual type
+       if( t1 == SELF_TYPE ) { t1 = c->get_name(); }
+       else { t2 = c->get_name(); }
+   }
+   if( t1 == No_type ) { return t2; }                   // exceptionally handle no_type
+   if( t2 == No_type ) { return t1; }
+    
+    Symbol p1, p2;
+    Class_ c1, c2;
+    Symbol lub = Object;
+    bool breakFlag = false;
+    for( p1 = CT->class_map->lookup(t1)->get_name() ;       // from t1 until p1(before object), 
+         p1 != Object ;
+         p1 = CT->class_map->lookup(p1)->get_parent() 
+        ) {
+
+        for( p2 = CT->class_map->lookup(t2)->get_name() ;   // from t2 until p2(before object), 
+         p2 != Object ;
+         p2 = CT->class_map->lookup(p2)->get_parent()   
+        ) {
+            if( p1 == p2 ) { breakFlag = true; break; }     // find, directly break.
+        }
+        if( breakFlag ) { break; }
+    }
+    return lub;
+}
+
+bool ClassTable::is_poset( Symbol left, Symbol right, Class_ c ) {
+
+    if( left == right ) { return true; }
+    if( left == SELF_TYPE || right == SELF_TYPE ) {           // set SELF_TYPE with actual type
+       if( left == SELF_TYPE ) { left = c->get_name(); }
+       else { right = c->get_name(); }
+   }
+    if( left == No_type ) { return true; }
+    if( right == No_type && left != No_type ) { return false; }
+
+    Symbol p;
+    for( p = CT->class_map->lookup(left)->get_name() ;       // from t1 until p1(before object), 
+         p != Object ;
+         p = CT->class_map->lookup(p)->get_parent() 
+        ) {
+            
+        if( p == right ) { return true; }                   // found l<r
+    }
+    if( right == Object ) { return true; }                  // case when l,r = Object
+    return false;                                           // otherwise not poset
 }
 
 void ClassTable::check_parent_symboltable_build( Symbol s_c, Symbol target ) {
