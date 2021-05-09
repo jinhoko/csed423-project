@@ -400,41 +400,41 @@ Symbol plus_class::infer_type( Class_ c ) {
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Int)->type; // TODO Huh? plus
+    return set_type(Int)->type; 
 }
 Symbol sub_class::infer_type( Class_ c ){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Int)->type; // TODO Huh? sub
+    return set_type(Int)->type; 
 }
 Symbol mul_class::infer_type( Class_ c) {
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Int)->type; // TODO Huh? mul
+    return set_type(Int)->type; 
 }
 Symbol divide_class::infer_type( Class_ c ){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Int)->type; // TODO Huh? divide
+    return set_type(Int)->type;
 }
 Symbol neg_class::infer_type( Class_ c){
     type = e1->infer_type(c);
     if( type == Int ) { return type; }
     CT->printerr_neg_nonint( c, this, type );
-    return set_type(Int)->type; // TODO Huh? neg
+    return set_type(Int)->type; 
 }
 Symbol lt_class::infer_type( Class_ c){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Bool)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Bool)->type;    // TODO Huh? lt
+    return set_type(Bool)->type;  
 }
 Symbol eq_class::infer_type( Class_ c){
     Symbol t1, t2;
@@ -446,26 +446,26 @@ Symbol eq_class::infer_type( Class_ c){
         CT->printerr_eq_basictype( c, this );
         return set_type(Bool)->type;
     }
-    return set_type(Bool)->type;    // TODO huh? eq
+    return set_type(Bool)->type; 
 }
 Symbol leq_class::infer_type( Class_ c){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Bool)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Bool)->type;    // TODO huh?
+    return set_type(Bool)->type; 
 }
 Symbol comp_class::infer_type( Class_ c){ 
     type = e1->infer_type(c);
     if( type == Bool ) { return type; }
     CT->printerr_comp( c, this, type);
-    return set_type(Bool)->type;    // TODO huh? leq
+    return set_type(Bool)->type; 
 }
 Symbol int_const_class::infer_type( Class_ c){ return set_type(Int)->type; }
 Symbol bool_const_class::infer_type( Class_ c){ return set_type(Bool)->type; }
 Symbol string_const_class::infer_type( Class_ c){ return set_type(Str)->type; }
 Symbol new__class::infer_type( Class_ c ){
-    if( type_name == SELF_TYPE) { return set_type( c->get_name() )->type; }
+    if( type_name == SELF_TYPE) { return set_type( SELF_TYPE )->type; }
     if( CT->get_class(type_name) != NULL ) { return set_type(type_name)->type; }
     CT->printerr_new_undefined( c, this, type_name );
     return set_type(Object)->type;  
@@ -473,7 +473,7 @@ Symbol new__class::infer_type( Class_ c ){
 Symbol isvoid_class::infer_type( Class_ c){ e1->infer_type( c ); type = Bool; return type; }
 Symbol no_expr_class::infer_type( Class_ c){ type = No_type; return type; }
 Symbol object_class::infer_type( Class_ c ){
-    if(name == self) { return set_type(SELF_TYPE)->type; } // TODO huh?
+    if(name == self) { return set_type(SELF_TYPE)->type; }
     type = CT->environment[c->get_name()]->ot->lookup(name);
     if( type != NULL ){ return type; }
     CT->printerr_undeclared_id( c, this, name);
