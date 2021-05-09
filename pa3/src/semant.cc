@@ -394,7 +394,7 @@ Symbol let_class::infer_type( Class_ c ){
     type = body->infer_type(c);
     CT->environment[c->get_name()]->exitscope();
     return type;
-}
+} 
 Symbol plus_class::infer_type( Class_ c ) {
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
