@@ -44,7 +44,7 @@ typedef struct _OMTable {
         mt->enterscope();
     }
     void exitscope() {
-        ot->enterscope();
+        ot->exitscope();
         mt->exitscope();
     }
 
@@ -125,7 +125,9 @@ public:
   void printerr_cyclefound( Class_ c1, Symbol c2);
 
   void printerr_main_method_not_exists( Class_ c1 );
+  void printerr_main_method_param_error( Class_ c1);
   void printerr_main_class_not_exists( );
+  
 
   // due to recursive print_err, the following printerr functions will
   // omit error after checking error_checked
@@ -156,7 +158,19 @@ public:
   void printerr_assign_self( Class_ c1, Expression e);
   void printerr_assign_mismatch( Class_ c1, Expression e, Symbol t1, Symbol t2, Symbol name);
   void printerr_assign_undeclared( Class_ c1, Expression e, Symbol name);
+  void printerr_let_self( Class_ c1, Expression e);
+  void printerr_let_undefined( Class_ c1, Expression e, Symbol type, Symbol name);
+  void printerr_let_mismatch( Class_ c1, Expression e, Symbol t1, Symbol name, Symbol t2);
+  void printerr_dispatch_undefined( Class_ c1, Expression e, Symbol name);
+  void printerr_dispatch_paramerror( Class_ c1, Expression e, Symbol name, Symbol t1, Symbol name2, Symbol t2);
+  void printerr_dispatch_paramnumerror( Class_ c1, Expression e, Symbol name );
+  void printerr_staticdispatch_selftype( Class_ c1, Expression e);
+  void printerr_staticdispatch_undefined( Class_ c1, Expression e, Symbol name);
+  void printerr_staticdispatch_typeerror( Class_ c1, Expression e, Symbol t1, Symbol t2);
 
+    //void printerr_case_self( Class_ c1, Expression e);
+  // printerr_case_
+  
   void printerr_method_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2);
   void printerr_attr_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2 );
 };

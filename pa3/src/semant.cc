@@ -215,16 +215,21 @@ bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
 
 void attr_class::check_type( Class_ c ) {
 
+    CT->environment[c->get_name()]->enterscope();
+    CT->environment[c->get_name()]->add_attr(self, c->get_name()); // add self
     Symbol t1 = init->infer_type(c);
-    if( ! CT->is_class_exists_in_program(type_decl) && type_decl!=SELF_TYPE ) { return; } // for invalid type_decl, pass type inference
-    if( ! (CT->is_poset(t1, type_decl, c)) ) {
-        CT->printerr_attr_mismatch( c, this, t1, type_decl);
-    }    
+    if( CT->is_class_exists_in_program(type_decl) || type_decl!=SELF_TYPE ) { // for invalid type_decl, pass type inference
+        if( ! (CT->is_poset(t1, type_decl, c)) ) {
+            CT->printerr_attr_mismatch( c, this, t1, type_decl);
+        }   
+    } 
+    CT->environment[c->get_name()]->exitscope();
 }
 void method_class::check_type( Class_ c ) {
 
     CT->environment[c->get_name()]->enterscope();
     // add formals (except one has name self)
+    CT->environment[c->get_name()]->add_attr(self, c->get_name()); // add self
     Formal f;
     int idx;
     for( idx = get_formals()->first();
@@ -233,13 +238,17 @@ void method_class::check_type( Class_ c ) {
 
         f = get_formals()->nth(idx);
         if( f->get_name() == self ) { continue; }
-        if( CT->environment[c->get_name()]->ot->lookup(f->get_name()) != NULL ) { continue; }   // pass duplicates
+        if( CT->environment[c->get_name()]->ot->probe(f->get_name()) != NULL ) { continue; }   // pass duplicates
         CT->environment[c->get_name()]->add_attr(f->get_name(), f->get_type());                 // add formal
     }
     // infer type
     Symbol t0_ = get_expr()->infer_type(c);
-    if( CT->is_class_exists_in_program(return_type) || return_type==SELF_TYPE ) {     // for invalid type_decl, pass type inference
-        if( ! (CT->is_poset(t0_, return_type, c)) ) {   
+    Symbol t0 = return_type;
+    if( CT->is_class_exists_in_program(t0) || return_type==SELF_TYPE ) {     // for invalid type_decl, pass type inference
+        if( t0 == SELF_TYPE ) { t0 = c->get_name(); }
+        //std::cout << "DEBUG " << t0_->get_string() << ":" << t0->get_string() << std::endl; // TODO del
+
+        if( ! (CT->is_poset(t0_, t0, c)) ) {   
             CT->printerr_method_mismatch( c, this, t0_, return_type);
         }
     } 
@@ -259,12 +268,90 @@ Symbol assign_class::infer_type( Class_ c) {
     return Object;
 }
 Symbol static_dispatch_class::infer_type( Class_ c) {
-    // TODO not yet
-    return Object;
+    if( type_name == SELF_TYPE ) {
+        CT->printerr_staticdispatch_selftype(c, this);
+        return set_type(Object)->type;
+    }
+    if( ! CT->is_class_exists_in_program( type_name ) && type_name!=SELF_TYPE ) {
+        CT->printerr_staticdispatch_undefined( c, this, type_name);
+        return set_type(Object)->type;
+    }
+    Symbol t0 = expr->infer_type(c);
+    if( ! CT->is_poset( t0, type_name, c) ) { 
+        CT->printerr_staticdispatch_typeerror( c, this, t0, type_name);
+        return set_type(Object)->type;
+    }
+    // method lookup
+    Feature method = CT->environment[type_name]->mt->lookup(name);
+    if( method == NULL ) {
+        CT->printerr_dispatch_undefined(c, this, name);
+        return set_type(Object)->type;
+    }
+    Symbol tn1_ = method->get_type();
+    // poset check for each formals
+    bool isNumParamRight = true, isPosetRight = true;
+    if( actual->len() != method->get_formals()->len() ) {
+        CT->printerr_dispatch_paramnumerror( c, this, name );
+        isNumParamRight = false;
+    } else {
+        Expression en; Symbol tn, tn_;
+        int idx;
+        for( idx = actual->first();
+            actual->more(idx);
+            idx = actual->next(idx) ) {
+            
+            en = actual->nth(idx);
+            tn = en->infer_type(c);
+            tn_ = method->get_formals()->nth(idx)->get_type();
+            if( ! CT->is_poset( tn, tn_, c ) ) {
+                CT->printerr_dispatch_paramerror( c, this, method->get_name(), 
+                        tn, method->get_formals()->nth(idx)->get_name(), tn_ );
+                isPosetRight = false;
+            }
+        }
+    }
+    if( isNumParamRight && isPosetRight ) { 
+        return set_type( (tn1_==SELF_TYPE) ? t0 : method->get_type() )->type;
+    }
+    return set_type(Object)->type;
 }
 Symbol dispatch_class::infer_type( Class_ c ){
-    // TODO not yet
-    return Object;
+    Symbol t0 = expr->infer_type(c);
+    Symbol t0_ = (t0 == SELF_TYPE) ? c->get_name() : t0;
+    // method lookup
+    Feature method = CT->environment[t0_]->mt->lookup(name);
+    if( method == NULL ) {
+        CT->printerr_dispatch_undefined(c, this, name);
+        return set_type(Object)->type;
+    }
+    Symbol tn1_ = method->get_type();
+    // poset check for each formals
+    bool isNumParamRight = true, isPosetRight = true;
+    if( actual->len() != method->get_formals()->len() ) {
+        CT->printerr_dispatch_paramnumerror( c, this, name );
+        isNumParamRight = false;
+    } else {
+        Expression en; Symbol tn, tn_;
+        int idx;
+        for( idx = actual->first();
+            actual->more(idx);
+            idx = actual->next(idx) ) {
+            
+            en = actual->nth(idx);
+            tn = en->infer_type(c);
+            tn_ = method->get_formals()->nth(idx)->get_type();
+
+            if( ! CT->is_poset( tn, tn_, c ) ) {
+                CT->printerr_dispatch_paramerror( c, this, method->get_name(), 
+                        tn, method->get_formals()->nth(idx)->get_name(), tn_ );
+                isPosetRight = false;
+            }
+        }
+    }
+    if( isNumParamRight && isPosetRight ) { 
+        return set_type( (tn1_==SELF_TYPE) ? t0 : method->get_type() )->type;
+    }
+    return set_type(Object)->type;
 }
 Symbol cond_class::infer_type( Class_ c) {
     if( pred->infer_type(c) != Bool ) {
@@ -288,90 +375,105 @@ Symbol block_class::infer_type( Class_ c ) {
     int idx;
     for (idx = body->first(); body->more(idx); idx = body->next(idx)) {
         type = body->nth(idx)->infer_type(c);
+        //std::cout << "DEBUG body " << "- " << type->get_string() << std::endl; // TODO del
     }
     return type;
 }
 Symbol let_class::infer_type( Class_ c ){
-    // TODO not yet
-    return Object;
+    if( identifier == self ) { CT->printerr_let_self(c, this); }
+    if( ! (CT->is_class_exists_in_program(type_decl)) && type_decl!=SELF_TYPE ) {
+        CT->printerr_let_undefined(c, this, type_decl, identifier);
+    }
+    Symbol t = init->infer_type(c);
+    if(! CT->is_poset(t, type_decl, c) ) {
+        CT->printerr_let_mismatch(c, this, t, identifier, type_decl);
+    }
+    CT->environment[c->get_name()]->enterscope();
+    //std::cout << "DEBUG introduce" << identifier->get_string() << ":" << type_decl->get_string() << std::endl; // TODO del
+    CT->environment[c->get_name()]->add_attr(identifier, type_decl);
+    type = body->infer_type(c);
+    CT->environment[c->get_name()]->exitscope();
+    return type;
 }
 Symbol plus_class::infer_type( Class_ c ) {
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Object)->type;
+    return set_type(Int)->type; // TODO Huh? plus
 }
 Symbol sub_class::infer_type( Class_ c ){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Object)->type;
+    return set_type(Int)->type; // TODO Huh? sub
 }
 Symbol mul_class::infer_type( Class_ c) {
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Object)->type;
+    return set_type(Int)->type; // TODO Huh? mul
 }
 Symbol divide_class::infer_type( Class_ c ){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
     if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Object)->type;
+    return set_type(Int)->type; // TODO Huh? divide
 }
 Symbol neg_class::infer_type( Class_ c){
     type = e1->infer_type(c);
     if( type == Int ) { return type; }
     CT->printerr_neg_nonint( c, this, type );
-    return set_type(Object)->type;
+    return set_type(Int)->type; // TODO Huh? neg
 }
 Symbol lt_class::infer_type( Class_ c){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
-    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    if ( t1 == Int && t2 == Int) { return set_type(Bool)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Object)->type;
+    return set_type(Bool)->type;    // TODO Huh? lt
 }
 Symbol eq_class::infer_type( Class_ c){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
+
     bool isPrimitive = t1 == Int || t2 == Int || t1 == Bool || t2 == Bool || t1 == Str || t2 == Str;
     bool isTypeDifferent = t1 != t2;
     if ( isPrimitive && isTypeDifferent ) {
         CT->printerr_eq_basictype( c, this );
-        return set_type(Object)->type;
+        return set_type(Bool)->type;
     }
-    return set_type(Bool)->type;
+    return set_type(Bool)->type;    // TODO huh? eq
 }
 Symbol leq_class::infer_type( Class_ c){
     Symbol t1, t2;
     t1 = e1->infer_type(c); t2 = e2->infer_type(c);
-    if ( t1 == Int && t2 == Int) { return set_type(Int)->type; }
+    if ( t1 == Int && t2 == Int) { return set_type(Bool)->type; }
     CT->printerr_arith_nonint( c, this, t1, t2 );
-    return set_type(Object)->type;
+    return set_type(Bool)->type;    // TODO huh?
 }
 Symbol comp_class::infer_type( Class_ c){ 
     type = e1->infer_type(c);
     if( type == Bool ) { return type; }
     CT->printerr_comp( c, this, type);
-    return set_type(Object)->type;
+    return set_type(Bool)->type;    // TODO huh? leq
 }
 Symbol int_const_class::infer_type( Class_ c){ return set_type(Int)->type; }
 Symbol bool_const_class::infer_type( Class_ c){ return set_type(Bool)->type; }
 Symbol string_const_class::infer_type( Class_ c){ return set_type(Str)->type; }
 Symbol new__class::infer_type( Class_ c ){
-    if( type_name == SELF_TYPE) { return set_type(SELF_TYPE)->type; }
+    if( type_name == SELF_TYPE) { return set_type( c->get_name() )->type; }
     if( CT->get_class(type_name) != NULL ) { return set_type(type_name)->type; }
     CT->printerr_new_undefined( c, this, type_name );
     return set_type(Object)->type;  
 }
 Symbol isvoid_class::infer_type( Class_ c){ e1->infer_type( c ); type = Bool; return type; }
 Symbol no_expr_class::infer_type( Class_ c){ type = No_type; return type; }
-Symbol object_class::infer_type( Class_ c){
+Symbol object_class::infer_type( Class_ c ){
+    if(name == self) { return set_type(SELF_TYPE)->type; } // TODO huh?
     type = CT->environment[c->get_name()]->ot->lookup(name);
     if( type != NULL ){ return type; }
     CT->printerr_undeclared_id( c, this, name);
@@ -560,6 +662,10 @@ void ClassTable::printerr_main_method_not_exists( Class_ c1 ) {
 void ClassTable::printerr_main_class_not_exists() {
     semant_error( ) << "Class Main is not defined.\n";
 }
+void ClassTable::printerr_main_method_param_error( Class_ c1) {
+    semant_error( c1 ) << "'main' method in class Main should have no arguments.\n";
+}
+  
 
 bool ClassTable::_is_printerr_available( Class_ c1, Symbol target ) { return c1->get_name() == target; }
 void ClassTable::printerr_attr_name_self( Class_ c1, Feature f, Symbol target){
@@ -590,7 +696,7 @@ void ClassTable::printerr_method_redefined_numargerror ( Class_ c1, Feature f, S
 }
 void ClassTable::printerr_method_paramtypeerror( Class_ c1, Feature f, Symbol name, Symbol type, Symbol type2, Symbol target){
     if( _is_printerr_available(c1, target))
-        semant_error( c1->get_filename(), f ) << "In redefined method " << name->get_string() << ", parameter type " << type->get_string() << " is different from original type " << type2->get_string() << ".\n";
+        semant_error( c1->get_filename(), f ) << "In redefined method " << name->get_string() << ", parameter type " << type->get_string() << " is different from original type " << type2->get_string() << "\n";
 }
 void ClassTable::printerr_method_multiple_formal( Class_ c1, Feature f, Symbol name, Symbol target ) {
     if( _is_printerr_available(c1, target))
@@ -644,6 +750,37 @@ void ClassTable::printerr_assign_mismatch( Class_ c1, Expression e, Symbol t1, S
 void ClassTable::printerr_assign_undeclared( Class_ c1, Expression e, Symbol name){
     semant_error( c1->get_filename(), e ) << "Assignment to undeclared variable "<< name->get_string() << ".\n";
 }
+void ClassTable::printerr_let_self( Class_ c1, Expression e) {
+    semant_error( c1->get_filename(), e ) << "'self' cannot be bound in a 'let' expression.\n";
+}
+void ClassTable::printerr_let_undefined( Class_ c1, Expression e, Symbol type, Symbol name) {
+    semant_error( c1->get_filename(), e ) << "Class " << type->get_string() << " of let-bound identifier " << name->get_string() << " is undefined.\n";
+}
+void ClassTable::printerr_let_mismatch( Class_ c1, Expression e, Symbol t1, Symbol name, Symbol t2) {
+    semant_error( c1->get_filename(), e ) << "Inferred type " << t1->get_string() << " of initialization of " << name->get_string()  << " does not conform to identifier's declared type " << t2->get_string() << ".\n";
+}
+void ClassTable::printerr_dispatch_undefined( Class_ c1, Expression e, Symbol name) {
+    semant_error( c1->get_filename(), e ) << "Dispatch to undefined method " << name->get_string() << ".\n";
+}
+void ClassTable::printerr_dispatch_paramerror( Class_ c1, Expression e, Symbol name, Symbol t1, Symbol name2, Symbol t2) {
+    semant_error( c1->get_filename(), e ) << "In call of method " << name->get_string() <<  ", type " << t1->get_string()
+                                            << " of parameter " <<  name2->get_string() << " does not conform to " <<
+                                            "declared type " << t2->get_string() << ".\n";
+}
+void ClassTable::printerr_dispatch_paramnumerror( Class_ c1, Expression e, Symbol name ) {
+    semant_error( c1->get_filename(), e ) << "Method " << name->get_string() << " called with wrong number of arguments.\n";
+}
+void ClassTable::printerr_staticdispatch_selftype( Class_ c1, Expression e) {
+    semant_error( c1->get_filename(), e ) << "Static dispatch to SELF_TYPE.\n";
+}
+void ClassTable::printerr_staticdispatch_undefined( Class_ c1, Expression e, Symbol type) {
+    semant_error( c1->get_filename(), e ) << "Static dispatch to undefined class " << type->get_string() << ".\n";
+}
+void ClassTable::printerr_staticdispatch_typeerror( Class_ c1, Expression e, Symbol t1, Symbol t2) {
+    semant_error( c1->get_filename(), e ) << "Expression type " << t1->get_string() << " does not conform to declared static dispatch type " << t2->get_string() << ".\n";
+}
+
+////
 
 void ClassTable::printerr_method_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2){
     semant_error( c1->get_filename(), f ) << "Inferred return type " << t1->get_string() << " of method " << f->get_name()->get_string()<< " does not conform to declared return type " << t2->get_string() << ".\n";
@@ -976,7 +1113,7 @@ void ClassTable::check_types() {
 
 Symbol ClassTable::get_lub( Symbol t1, Symbol t2, Class_ c ){
 
-   if( t1 = t2 ) { return t1; }                         // if equal, return one
+   if( t1 == t2 ) { return t1; }                         // if equal, return one
    if( t1 == SELF_TYPE || t2 == SELF_TYPE ) {           // set SELF_TYPE with actual type
        if( t1 == SELF_TYPE ) { t1 = c->get_name(); }
        else { t2 = c->get_name(); }
@@ -997,7 +1134,8 @@ Symbol ClassTable::get_lub( Symbol t1, Symbol t2, Class_ c ){
          p2 != Object ;
          p2 = CT->class_map->lookup(p2)->get_parent()   
         ) {
-            if( p1 == p2 ) { breakFlag = true; break; }     // find, directly break.
+
+            if( p1 == p2 ) { lub = p1; breakFlag = true; break; }     // find, directly break.
         }
         if( breakFlag ) { break; }
     }
@@ -1013,7 +1151,7 @@ bool ClassTable::is_poset( Symbol left, Symbol right, Class_ c ) {
    }
     if( left == No_type ) { return true; }
     if( right == No_type && left != No_type ) { return false; }
-
+    //std::cout << "DEBUG " << left->get_string() << ":" << right->get_string() << std::endl; // TODO del
     Symbol p;
     for( p = CT->class_map->lookup(left)->get_name() ;       // from t1 until p1(before object), 
          p != Object ;
@@ -1076,12 +1214,34 @@ void ClassTable::check_name_scope() {
 
 void ClassTable::check_entrypoint() {
 
-    bool isMainClassExists = true; // TODO change condition
-    bool isMainMethodDefined = true;
+    bool isMainClassExists = is_class_exists_in_program(Main);
     if( ! isMainClassExists ) {
         printerr_main_class_not_exists();
+        return;
+    }
+    Class_ c = class_map->lookup(Main);
+    bool isMainMethodDefined = false;
+    bool isMainMethodDefinedAndNumParamZero = false;
+    Features mainf = c->get_features();
+    Feature f; int idx;
+    for( idx = mainf->first();
+        mainf->more(idx);
+        idx = mainf->next(idx) ) {
+            
+            f = mainf->nth(idx);
+            if( f->get_name() == main_meth ) {
+                isMainMethodDefined = true;
+                if( f->get_formals()->len() == 0 ) {
+                    isMainMethodDefinedAndNumParamZero = true;
+                }
+            }
+    }
+    if( isMainMethodDefined ) {
+        if( ! isMainMethodDefinedAndNumParamZero ) {
+            printerr_main_method_param_error( c );
+        }
     } else {
-        // TODO if Main defined, check if main defined
+        printerr_main_method_not_exists( c ); 
     }
 }
 
