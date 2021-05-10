@@ -10,6 +10,9 @@
 ../semant-test/mine/t10.cl
 ../semant-test/mine/t11.cl
 ../semant-test/mine/t12.cl
+../semant-test/mine/t12-1.cl
 ../semant-test/mine/t13.cl
 ../semant-test/mine/t14.cl
 ../semant-test/mine/t15.cl
+../semant-test/mine/t16.cl
+../semant-test/mine/t17.cl

@@ -217,7 +217,7 @@ void attr_class::check_type( Class_ c ) {
     CT->environment[c->get_name()]->enterscope();
     CT->environment[c->get_name()]->add_attr(self, c->get_name()); // add self
     Symbol t1 = init->infer_type(c);
-    if( CT->is_class_exists_in_program(type_decl) || type_decl!=SELF_TYPE ) { // for invalid type_decl, pass type inference
+    if( CT->is_class_exists_in_program(type_decl) || type_decl==SELF_TYPE ) { // for invalid type_decl, pass type inference
         if( ! (CT->is_poset(t1, type_decl, c)) ) {
             CT->printerr_attr_mismatch( c, this, t1, type_decl);
         }   
@@ -244,7 +244,6 @@ void method_class::check_type( Class_ c ) {
     Symbol t0_ = get_expr()->infer_type(c);
     Symbol t0 = return_type;
     if( CT->is_class_exists_in_program(t0) || return_type==SELF_TYPE ) {     // for invalid type_decl, pass type inference
-        if( t0 == SELF_TYPE ) { t0 = c->get_name(); }
 
         if( ! (CT->is_poset(t0_, t0, c)) ) {   
             CT->printerr_method_mismatch( c, this, t0_, return_type);
@@ -263,7 +262,7 @@ Symbol assign_class::infer_type( Class_ c) {
     Symbol t_ = expr->infer_type(c);
     if( CT->is_poset(t_, t, c) ) { return set_type(t_)->type; }
     CT->printerr_assign_mismatch( c, this, t_, t, name );
-    return Object;
+    return t_;  // recover as type t_!
 }
 Symbol static_dispatch_class::infer_type( Class_ c) {
     if( type_name == SELF_TYPE ) {
@@ -395,9 +394,12 @@ Symbol typcase_class::infer_type( Class_ c ){
         CT->environment[c->get_name()]->add_attr(ca_name, ca_type);
         ca_inferred = ca->get_expr()->infer_type(c);
         CT->environment[c->get_name()]->exitscope();
+    //    std::cout << "cmp " << ca_inferred << " " << lub->get_string() << std::endl; // TODO del
         lub = CT->get_lub( ca_inferred, lub, c);
         case_types.addid(ca_type, new int(1));
     }
+    //std::cout << "infered " << lub->get_string() << std::endl; // TODO del
+
     return set_type(lub)->type;
 }
 Symbol block_class::infer_type( Class_ c ) {
@@ -409,11 +411,13 @@ Symbol block_class::infer_type( Class_ c ) {
 }
 Symbol let_class::infer_type( Class_ c ){
     if( identifier == self ) { CT->printerr_let_self(c, this); }
+    bool isTypeCheckPossible = true;
     if( ! (CT->is_class_exists_in_program(type_decl)) && type_decl!=SELF_TYPE ) {
         CT->printerr_let_undefined(c, this, type_decl, identifier);
+        isTypeCheckPossible = false;
     }
     Symbol t = init->infer_type(c);
-    if(! CT->is_poset(t, type_decl, c) ) {
+    if( isTypeCheckPossible && !CT->is_poset(t, type_decl, c) ) {
         CT->printerr_let_mismatch(c, this, t, identifier, type_decl);
     }
     CT->environment[c->get_name()]->enterscope();
@@ -708,7 +712,7 @@ void ClassTable::printerr_attr_multiple_defined( Class_ c1, Feature f,Symbol nam
     if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Attribute " << name->get_string() << " is multiply defined in class.\n";
 }
 void ClassTable::printerr_method_multiple_defined( Class_ c1, Feature f,Symbol name, Symbol target ){
-    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Method " << name->get_string() << " is multiply defined\n";
+    if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Method " << name->get_string() << " is multiply defined.\n";
 }
 void ClassTable::printerr_attr_in_inherited_class( Class_ c1, Feature f, Symbol name, Symbol target ){
     if( _is_printerr_available(c1, target)) semant_error( c1->get_filename(), f ) << "Attribute " << name->get_string() << " is an attribute of an inherited class.\n";
@@ -1153,12 +1157,15 @@ void ClassTable::check_types() {
 Symbol ClassTable::get_lub( Symbol t1, Symbol t2, Class_ c ){
 
    if( t1 == t2 ) { return t1; }                         // if equal, return one
+
+   if( t1 == No_type ) { return t2; }                   // exceptionally handle no_type
+   if( t2 == No_type ) { return t1; }
+
    if( t1 == SELF_TYPE || t2 == SELF_TYPE ) {           // set SELF_TYPE with actual type
        if( t1 == SELF_TYPE ) { t1 = c->get_name(); }
        else { t2 = c->get_name(); }
    }
-   if( t1 == No_type ) { return t2; }                   // exceptionally handle no_type
-   if( t2 == No_type ) { return t1; }
+
     
     Symbol p1, p2;
     Class_ c1, c2;
@@ -1184,7 +1191,9 @@ Symbol ClassTable::get_lub( Symbol t1, Symbol t2, Class_ c ){
 bool ClassTable::is_poset( Symbol left, Symbol right, Class_ c ) {
 
     if( left == right ) { return true; }
-    if( left == SELF_TYPE || right == SELF_TYPE ) {           // set SELF_TYPE with actual type
+    if( right == Object) { return true; }
+    if( right == SELF_TYPE && left == c->get_name() ) { return false; } // special logic : poset not possible                                                   
+    if( left == SELF_TYPE || right == SELF_TYPE ) {                     // set SELF_TYPE with actual type
        if( left == SELF_TYPE ) { left = c->get_name(); }
        else { right = c->get_name(); }
    }
@@ -1266,11 +1275,14 @@ void ClassTable::check_entrypoint() {
         idx = mainf->next(idx) ) {
             
             f = mainf->nth(idx);
-            if( f->get_name() == main_meth ) {
-                isMainMethodDefined = true;
-                if( f->get_formals()->len() == 0 ) {
+            if( f->get_name() == main_meth
+                && f->get_formals() != NULL  ) {  // only for M
+
+                isMainMethodDefined = true; 
+                if( f->get_formals()->len() == 0 ) {    // first main method should have no parameter
                     isMainMethodDefinedAndNumParamZero = true;
                 }
+                break;
             }
     }
     if( isMainMethodDefined ) {
