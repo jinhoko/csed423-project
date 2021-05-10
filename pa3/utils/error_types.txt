@@ -1,0 +1,78 @@
+Class AA, or an ancestor of AA, is involved in an inheritance cycle.
+Class G inherits from an undefined class A.
+Class D cannot inherit class Bool.
+Redefinition of basic class Object.
+Class Main was previously defined.
+
+
+Class Main is not defined.
+No 'main' method in class Main.
+
+===========================================================================
+class method formals
+===========================================================================
+
+
+(self)
+'self' cannot be the name of an attribute.
+
+(no type)
+Undefined return type Void in method do.
+
+(formal error)
+Formal parameter x is multiply defined.
+Formal parameter x cannot have type SELF_TYPE.
+Incompatible number of formal parameters in redefined method foo.
+'self' cannot be the name of a formal parameter.
+
+(redefinition error)
+In redefined method isNil, return type Bool is different from original return type Object.
+Attribute moo is an attribute of an inherited class.
+
+
+===========================================================================
+expression evaluate하는 과정에서 오류
+===========================================================================
+
+(ID undeclared)
+Undeclared identifier moo.
+
+(assign)
+Cannot assign to 'self'.
+Type A of assigned expression does not conform to declared type B of identifier b.
+
+
+(let)
+'self' cannot be bound in a 'let' expression.
+
+(case branch)
+Class Object1 of case branch is undefined.
+Duplicate branch Int in case statement.
+
+(method)
+Method init called with wrong number of arguments.
+Inferred return type Object of method ss does not conform to declared return type SELF_TYPE.
+
+(let)
+Inferred type A of initialization of x does not conform to identifier's declared type B.
+
+
+(new)
+'new' used with undefined class PinkEle
+
+(loop)
+Loop condition does not have type Bool.
+In call of method init, type Int of parameter y does not conform to declared type Bool.
+
+(dispatch)
+Expression type SELF_TYPE does not conform to declared static dispatch type C.
+
+(+-*/)
+non-Int arguments: Int + Bool // non-Int arguments: Int + String
+
+(comparison)
+Illegal comparison with a basic type.
+
+
+
+/// 더 있을 듯... 만든다음 조사해야 함.
