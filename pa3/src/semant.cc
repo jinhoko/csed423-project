@@ -394,11 +394,9 @@ Symbol typcase_class::infer_type( Class_ c ){
         CT->environment[c->get_name()]->add_attr(ca_name, ca_type);
         ca_inferred = ca->get_expr()->infer_type(c);
         CT->environment[c->get_name()]->exitscope();
-    //    std::cout << "cmp " << ca_inferred << " " << lub->get_string() << std::endl; // TODO del
         lub = CT->get_lub( ca_inferred, lub, c);
         case_types.addid(ca_type, new int(1));
     }
-    //std::cout << "infered " << lub->get_string() << std::endl; // TODO del
 
     return set_type(lub)->type;
 }
