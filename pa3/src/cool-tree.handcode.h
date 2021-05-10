@@ -115,11 +115,17 @@ Symbol get_name();
 
 
 #define Case_EXTRAS                             \
-virtual void dump_with_types(ostream& ,int) = 0;
+virtual void dump_with_types(ostream& ,int) = 0; \
+virtual Symbol get_type()=0; \
+virtual Symbol get_name() = 0; \
+virtual Expression get_expr() = 0;
 
 
 #define branch_EXTRAS                                   \
-void dump_with_types(ostream& ,int);
+void dump_with_types(ostream& ,int); \
+Symbol get_type(); \
+Symbol get_name(); \
+Expression get_expr();
 
 
 #define Expression_EXTRAS                    \

@@ -161,16 +161,17 @@ public:
   void printerr_let_self( Class_ c1, Expression e);
   void printerr_let_undefined( Class_ c1, Expression e, Symbol type, Symbol name);
   void printerr_let_mismatch( Class_ c1, Expression e, Symbol t1, Symbol name, Symbol t2);
+  void printerr_dispatch_undefined_method( Class_ c1, Expression e, Symbol name);
   void printerr_dispatch_undefined( Class_ c1, Expression e, Symbol name);
   void printerr_dispatch_paramerror( Class_ c1, Expression e, Symbol name, Symbol t1, Symbol name2, Symbol t2);
   void printerr_dispatch_paramnumerror( Class_ c1, Expression e, Symbol name );
   void printerr_staticdispatch_selftype( Class_ c1, Expression e);
   void printerr_staticdispatch_undefined( Class_ c1, Expression e, Symbol name);
   void printerr_staticdispatch_typeerror( Class_ c1, Expression e, Symbol t1, Symbol t2);
-
-    //void printerr_case_self( Class_ c1, Expression e);
-  // printerr_case_
-  
+  void printerr_case_self( Class_ c1, Case e);
+  void printerr_case_selftype( Class_ c1, Case e, Symbol name);
+  void printerr_case_duplicate( Class_ c1, Case e, Symbol type );
+  void printerr_case_undefined( Class_ c1, Case e, Symbol name );
   void printerr_method_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2);
   void printerr_attr_mismatch( Class_ c1, Feature f, Symbol t1, Symbol t2 );
 };

@@ -100,6 +100,10 @@ Formals method_class::get_formals() { return formals; }
 Formals attr_class::get_formals() { return NULL; }
 Symbol formal_class::get_type() { return type_decl; }
 Symbol formal_class::get_name() { return name; }
+Symbol branch_class::get_type() { return type_decl; }
+Symbol branch_class::get_name() { return name; }
+Expression branch_class::get_expr() { return expr; }
+
 Expression attr_class::get_expr() { return init; }
 Expression method_class::get_expr() { return expr; }
 
@@ -176,9 +180,6 @@ bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
     bool isRedefinedMethodReturnTypeError = orig_method->get_type() != return_type ;
     bool isRedefinedMethodNumArgsError = orig_method->get_formals()->len() != get_formals()->len();
 
-    // CT->semant_error() << "inerit!" << orig_method->get_name()->get_string()  << std::endl; // TODO del
-    // orig_method->get_formals()->dump( CT->semant_error(), 2) ;
-    // CT->semant_error() << std::endl;
     if( isRedefinedMethodReturnTypeError ) {
         CT->printerr_method_redefined_typeerror( c, this, name,  return_type, orig_method->get_type(), target);
     }
@@ -200,8 +201,6 @@ bool method_class::check_feature_inheritance(Class_ c, Symbol target ) {
 
         orig_f = orig_fs->nth(idx);
         this_f = this->get_formals()->nth(idx);
-
-        //CT->semant_error() << orig_f->get_type()->get_string() << "--" << this_f->get_type()->get_string() << std::endl; // TODO del
 
         isRedefinedMethodParamTypeError = orig_f->get_type() != this_f->get_type();
         if( isRedefinedMethodParamTypeError ) { 
@@ -246,7 +245,6 @@ void method_class::check_type( Class_ c ) {
     Symbol t0 = return_type;
     if( CT->is_class_exists_in_program(t0) || return_type==SELF_TYPE ) {     // for invalid type_decl, pass type inference
         if( t0 == SELF_TYPE ) { t0 = c->get_name(); }
-        //std::cout << "DEBUG " << t0_->get_string() << ":" << t0->get_string() << std::endl; // TODO del
 
         if( ! (CT->is_poset(t0_, t0, c)) ) {   
             CT->printerr_method_mismatch( c, this, t0_, return_type);
@@ -260,7 +258,7 @@ Symbol assign_class::infer_type( Class_ c) {
     Symbol t = CT->environment[c->get_name()]->ot->lookup(name);
     if( t == NULL ) {
         CT->printerr_assign_undeclared( c, this, name);
-        return set_type(Object)->type; // TODO check 여기서 return 하는거 맞을지?
+        return set_type(Object)->type;
     }
     Symbol t_ = expr->infer_type(c);
     if( CT->is_poset(t_, t, c) ) { return set_type(t_)->type; }
@@ -284,7 +282,7 @@ Symbol static_dispatch_class::infer_type( Class_ c) {
     // method lookup
     Feature method = CT->environment[type_name]->mt->lookup(name);
     if( method == NULL ) {
-        CT->printerr_dispatch_undefined(c, this, name);
+        CT->printerr_dispatch_undefined_method(c, this, name);
         return set_type(Object)->type;
     }
     Symbol tn1_ = method->get_type();
@@ -317,11 +315,16 @@ Symbol static_dispatch_class::infer_type( Class_ c) {
 }
 Symbol dispatch_class::infer_type( Class_ c ){
     Symbol t0 = expr->infer_type(c);
+    // class check
+    if( ! CT->is_class_exists_in_program( t0 ) && t0!=SELF_TYPE ) {
+        CT->printerr_dispatch_undefined( c, this, t0);
+        return set_type(Object)->type;
+    }
     Symbol t0_ = (t0 == SELF_TYPE) ? c->get_name() : t0;
     // method lookup
     Feature method = CT->environment[t0_]->mt->lookup(name);
     if( method == NULL ) {
-        CT->printerr_dispatch_undefined(c, this, name);
+        CT->printerr_dispatch_undefined_method(c, this, name);
         return set_type(Object)->type;
     }
     Symbol tn1_ = method->get_type();
@@ -368,14 +371,39 @@ Symbol loop_class::infer_type( Class_ c ) {
     return set_type(Object)->type;
 }
 Symbol typcase_class::infer_type( Class_ c ){
-    // TODO not yet
-    return Object;
+    Symbol t0 = expr->infer_type(c);
+    Symbol lub = No_type;
+    assert( cases->len() >= 1 );
+
+    int idx; Case ca; Symbol ca_type; Symbol ca_name; Symbol ca_inferred;
+    SymbolTable<Symbol, int> case_types; case_types.enterscope();
+    for( idx = cases->first();
+        cases->more(idx);
+        idx = cases->next(idx) ) {
+            
+        ca = cases->nth(idx);
+        ca_type = ca->get_type();
+        ca_name = ca->get_name();
+
+        if( !CT->is_class_exists_in_program(ca_type) && ca_type!=SELF_TYPE) { CT->printerr_case_undefined(c, ca, ca_type); }
+        if( case_types.lookup(ca_type) != NULL ) { CT->printerr_case_duplicate(c, ca, ca_type); }
+
+        if( ca_name == self ) { CT->printerr_case_self(c, ca); } 
+        if( ca_type == SELF_TYPE ) { CT->printerr_case_selftype(c, ca, ca_name); 
+        }
+        CT->environment[c->get_name()]->enterscope();
+        CT->environment[c->get_name()]->add_attr(ca_name, ca_type);
+        ca_inferred = ca->get_expr()->infer_type(c);
+        CT->environment[c->get_name()]->exitscope();
+        lub = CT->get_lub( ca_inferred, lub, c);
+        case_types.addid(ca_type, new int(1));
+    }
+    return set_type(lub)->type;
 }
 Symbol block_class::infer_type( Class_ c ) {
     int idx;
     for (idx = body->first(); body->more(idx); idx = body->next(idx)) {
         type = body->nth(idx)->infer_type(c);
-        //std::cout << "DEBUG body " << "- " << type->get_string() << std::endl; // TODO del
     }
     return type;
 }
@@ -389,7 +417,6 @@ Symbol let_class::infer_type( Class_ c ){
         CT->printerr_let_mismatch(c, this, t, identifier, type_decl);
     }
     CT->environment[c->get_name()]->enterscope();
-    //std::cout << "DEBUG introduce" << identifier->get_string() << ":" << type_decl->get_string() << std::endl; // TODO del
     CT->environment[c->get_name()]->add_attr(identifier, type_decl);
     type = body->infer_type(c);
     CT->environment[c->get_name()]->exitscope();
@@ -760,6 +787,9 @@ void ClassTable::printerr_let_mismatch( Class_ c1, Expression e, Symbol t1, Symb
     semant_error( c1->get_filename(), e ) << "Inferred type " << t1->get_string() << " of initialization of " << name->get_string()  << " does not conform to identifier's declared type " << t2->get_string() << ".\n";
 }
 void ClassTable::printerr_dispatch_undefined( Class_ c1, Expression e, Symbol name) {
+    semant_error( c1->get_filename(), e ) << "Dispatch on undefined class " << name << ".\n";
+}
+void ClassTable::printerr_dispatch_undefined_method( Class_ c1, Expression e, Symbol name) {
     semant_error( c1->get_filename(), e ) << "Dispatch to undefined method " << name->get_string() << ".\n";
 }
 void ClassTable::printerr_dispatch_paramerror( Class_ c1, Expression e, Symbol name, Symbol t1, Symbol name2, Symbol t2) {
@@ -778,6 +808,18 @@ void ClassTable::printerr_staticdispatch_undefined( Class_ c1, Expression e, Sym
 }
 void ClassTable::printerr_staticdispatch_typeerror( Class_ c1, Expression e, Symbol t1, Symbol t2) {
     semant_error( c1->get_filename(), e ) << "Expression type " << t1->get_string() << " does not conform to declared static dispatch type " << t2->get_string() << ".\n";
+}
+void ClassTable::printerr_case_self( Class_ c1, Case e) {
+    semant_error( c1->get_filename(), e ) << "'self' bound in 'case'.\n";
+}
+void ClassTable::printerr_case_selftype( Class_ c1, Case e, Symbol name) {
+    semant_error( c1->get_filename(), e ) << "Identifier " << name->get_string() << " declared with type SELF_TYPE in case branch.\n";
+}
+void ClassTable::printerr_case_duplicate( Class_ c1, Case e, Symbol type ) {
+    semant_error( c1->get_filename(), e ) << "Duplicate branch " << type->get_string() << " in case statement.\n"; 
+}
+void ClassTable::printerr_case_undefined( Class_ c1, Case e, Symbol name ) {
+    semant_error( c1->get_filename(), e ) << "Class " << name->get_string() << " of case branch is undefined.\n";    
 }
 
 ////
@@ -1053,8 +1095,6 @@ void ClassTable::check_class_symboltable_build( Class_ c, Symbol target ) {
     Features features = c->get_features();
     Feature f;
 
-    // semant_error() << "current " << c->get_name()->get_string() << ", target " << target->get_string() << std::endl;// TODO Del
-
     // note that this function is called multiple times,
     // but error checking is announced only once.
     // by checking if c->get_name == target
@@ -1084,7 +1124,6 @@ void ClassTable::check_class_symboltable_build( Class_ c, Symbol target ) {
         f->add_feature( target );
         
     }
-    //semant_error() << std::endl; // TODO del
 }
 
 void ClassTable::check_types() {
@@ -1151,7 +1190,7 @@ bool ClassTable::is_poset( Symbol left, Symbol right, Class_ c ) {
    }
     if( left == No_type ) { return true; }
     if( right == No_type && left != No_type ) { return false; }
-    //std::cout << "DEBUG " << left->get_string() << ":" << right->get_string() << std::endl; // TODO del
+
     Symbol p;
     for( p = CT->class_map->lookup(left)->get_name() ;       // from t1 until p1(before object), 
          p != Object ;
@@ -1206,8 +1245,6 @@ void ClassTable::check_name_scope() {
         // build on _class_name
         check_class_symboltable_build( _class, _class_name );
         environment[_class_name]->add_attr( self, _class_name ); // add self
-    //    environment[_class_name]->mt->dump();
-    //    semant_error() << _class_name->get_string() << "OT scope임====================" << std::endl; // TODO del
     }
 }
 
