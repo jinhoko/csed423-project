@@ -1,13 +1,13 @@
 
 PADIR   = $(LEVEL)
-CS423 = /home/class/csed423
-LLVMDIR = $(CS423)/llvm_bhso/llvm-3.9.0.bin
-LLVMLIBDIR = $(LLVMDIR)/lib
+CS423 = /home/jhko/jhko/csed423-project/pa4
+LLVMDIR = /usr/bin
+LLVMLIBDIR = /usr/lib64/llvm
 OPT = opt -O3
 
-LEXER   = /home/class/csed423/cool-ref-binary/lexer
-PARSER  = /home/class/csed423/cool-ref-binary/parser
-SEMANT  = /home/class/csed423/cool-ref-binary/semant
+LEXER   = /home/jhko/jhko/csed423-project/pa4/ref-lexer/lexer
+PARSER  = /home/jhko/jhko/csed423-project/pa4/ref-parser/parser
+SEMANT  = /home/jhko/jhko/csed423-project/pa4/ref-semant/semant
 
 ifdef PA5
 COOLRT  = $(PADIR)/src/coolrt.o
@@ -28,12 +28,12 @@ endif
 CPPFLAGS = -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS $(EXTRAFLAGS) \
 	   -I. -I$(PADIR)/cool-support/include
 
-LDFLAGS = -L$(LLVMDIR)/lib
+LDFLAGS = -L/usr/lib64/llvm
 LDLIBS = 
 
 CXXFLAGS = -g -Wall -Wno-deprecated -Wno-unused -fpermissive -Wno-write-strings
-CXX = $(LLVMDIR)/bin/clang++
-CC =$(LLVMDIR)/bin/clang
+CXX = /usr/bin/clang++
+CC = /usr/bin/clang
 
 %.ast: %.cl
 	$(LEXER) $< | $(PARSER) | $(SEMANT) > $@
@@ -41,7 +41,6 @@ CC =$(LLVMDIR)/bin/clang
 %.ll: %.ast
 	$(CGEN) $(CGENOPTS) < $< > $@
 
-%.bc: %.ll
 	llvm-as < $< > $@
 
 %.s: %.bc
