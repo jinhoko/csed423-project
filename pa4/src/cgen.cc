@@ -13,6 +13,20 @@
 // 
 extern int cgen_debug;
 
+void debug_( string str, int space ) {
+		if (cgen_debug) {
+			for( int i = 0; i < space; i++ ) {
+				std::cerr << " ";
+			}
+			std::cerr << str << endl;
+		}
+	}
+
+void debug( string str ) {
+		debug_(str, 0);
+	} 
+
+
 //////////////////////////////////////////////////////////////////////
 //
 // Symbols
@@ -482,20 +496,24 @@ void IntEntry::code_def(ostream& s, CgenClassTable* ct)
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) 
 : nds(0)
 {
-	if (cgen_debug) std::cerr << "Building CgenClassTable" << endl;
+	debug("building classtable");
 	ct_stream = &s;
 	// Make sure we have a scope, both for classes and for constants
 	enterscope();
 
 	// Create an inheritance tree with one CgenNode per class.
+	debug("install_basic_classes()");
 	install_basic_classes();
+	debug("install_classes(classes)");
 	install_classes(classes);
 	build_inheritance_tree();
 
 	// First pass
+	debug("setup()");
 	setup();
 
 	// Second pass
+	debug("code_module()");
 	code_module();
 	// Done with code generation: exit scopes
 	exitscope();
@@ -546,8 +564,10 @@ void CgenClassTable::code_module()
 	// This must be after code_module() since that emits constants
 	// needed by the code() method for expressions
 	CgenNode* mainNode = getMainmain(root());
+	debug_( "codeGenMainmain", 2);
 	mainNode->codeGenMainmain();
 #endif
+	debug_( "code_main", 2);
 	code_main();
 
 #ifdef PA5
@@ -573,26 +593,60 @@ void CgenClassTable::code_classes(CgenNode *c)
 //
 void CgenClassTable::code_main()
 {
+	ValuePrinter vp(*ct_stream);
 	// Define a function main that has no parameters and returns an i32
-
+	vp.define( op_type(INT32), "main", vector<operand>() );
 	// Define an entry basic block
-
+	vp.begin_block( "entry" );
 	// Call Main_main(). This returns int* for phase 1, Object for phase 2
+	operand result_Main_main = 
+		vp.call( vector<op_type>(), op_type(INT32), "Main_main", true, vector<operand>() );
 
+	// Make string
+	string _str = "Main_main() returned %d\n";
+	const_value _str_val ( op_arr_type(INT8, 25), _str, false );
+	vp.init_constant(".str", _str_val);
+	
 
 #ifndef PA5
-	// Get the address of the string "Main_main() returned %d\n" using
-	// getelementptr 
+
+	// Get the address of the string "Main_main() returned %d\n" using getelementptr 
+	operand _str_ptr = vp.getelementptr(
+		op_arr_type(INT8, 25),
+		global_value( op_arr_type(INT8_PTR, 25), ".str" , _str_val ),
+		int_value(0),
+		int_value(0),
+		op_type(INT8_PTR) 
+	);
 
 	// Call printf with the string address of "Main_main() returned %d\n"
 	// and the return value of Main_main() as its arguments
+	
+	vector<op_type> call_result_paramtypes;
+	call_result_paramtypes.push_back( op_type(INT8_PTR) );
+	call_result_paramtypes.push_back( op_type(INT32) ) ;
+	vector<operand> call_result_params;
+	call_result_params.push_back( _str_ptr );
+	call_result_params.push_back( result_Main_main );
+
+	operand call_result = vp.call(
+			call_result_paramtypes,
+			op_type(INT32),
+			"printf",
+			true,
+			call_result_params
+	);
 
 	// Insert return 0
+	vp.ret( int_value(0) );
 
 #else
-	// Phase 2
-#endif
 
+	// Phase 2
+
+#endif
+	// End define
+	vp.end_define();
 }
 
 
@@ -669,16 +723,23 @@ void CgenNode::layout_features()
 //
 void CgenNode::codeGenMainmain()
 {
-	ValuePrinter vp;
 	// In Phase 1, this can only be class Main. Get method_class for main().
 	assert(std::string(this->name->get_string()) == std::string("Main"));
 	method_class* mainMethod = (method_class*) features->nth(features->first());
 
-	// ADD CODE HERE TO GENERATE THE FUNCTION int Mainmain().
 	// Generally what you need to do are:
 	// -- setup or create the environment, env, for translating this method
 	// -- invoke mainMethod->code(env) to translate the method
-	
+
+	ValuePrinter vp(*class_table->ct_stream);
+	CgenEnvironment* env = new CgenEnvironment(*(class_table->ct_stream), this);
+
+	vp.define( op_type(INT32), "Main_main", vector<operand>() );
+	vp.begin_block("entry");
+
+	mainMethod->code(env);
+
+	vp.end_define();
 
 }
 
@@ -700,6 +761,7 @@ CgenEnvironment::CgenEnvironment(std::ostream &o, CgenNode *c)
 	var_table.enterscope();
 	tmp_count = block_count = ok_count = 0;
 	// ADD CODE HERE
+	// TODO Cgenenvironment constructor
 }
 
 // Look up a CgenNode given a symbol
@@ -784,6 +846,13 @@ void method_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "method" << endl;
 
 	// ADD CODE HERE
+	// TODO method_class code
+	ValuePrinter vp(*(env->cur_stream));
+
+	// Return expr value
+	vp.ret(expr->code(env));
+	// TODO write more
+
 
 }
 
@@ -791,6 +860,7 @@ void method_class::code(CgenEnvironment *env)
 // Codegen for expressions.  Note that each expression has a value.
 //
 
+// TODO all expressions.
 operand assign_class::code(CgenEnvironment *env) 
 { 
 	if (cgen_debug) std::cerr << "assign" << endl;
