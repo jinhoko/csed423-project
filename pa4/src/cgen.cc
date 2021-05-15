@@ -594,6 +594,12 @@ void CgenClassTable::code_classes(CgenNode *c)
 void CgenClassTable::code_main()
 {
 	ValuePrinter vp(*ct_stream);
+
+	// Make string before define
+	string _str = "Main_main() returned %d\n";
+	const_value _str_val ( op_arr_type(INT8, 25), _str, false );
+	vp.init_constant(".str", _str_val);
+
 	// Define a function main that has no parameters and returns an i32
 	vp.define( op_type(INT32), "main", vector<operand>() );
 	// Define an entry basic block
@@ -601,12 +607,6 @@ void CgenClassTable::code_main()
 	// Call Main_main(). This returns int* for phase 1, Object for phase 2
 	operand result_Main_main = 
 		vp.call( vector<op_type>(), op_type(INT32), "Main_main", true, vector<operand>() );
-
-	// Make string
-	string _str = "Main_main() returned %d\n";
-	const_value _str_val ( op_arr_type(INT8, 25), _str, false );
-	vp.init_constant(".str", _str_val);
-	
 
 #ifndef PA5
 
@@ -848,8 +848,6 @@ void method_class::code(CgenEnvironment *env)
 
 	// Return expr value
 	vp.ret( expr->code(env) );
-
-	// TODO method_class write more abort?
 }
 
 //
@@ -859,28 +857,62 @@ void method_class::code(CgenEnvironment *env)
 operand assign_class::code(CgenEnvironment *env) 
 { 
 	if (cgen_debug) std::cerr << "assign" << endl;
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
-	// TODO assign_Class
-	return operand();
+	ValuePrinter vp(*(env->cur_stream));
+	operand expr_code = expr->code(env);
+	vp.store(	// store( RHS, LHS )
+		expr_code,
+		*(env->lookup(name))
+	);
+	return expr_code;
 }
 
 operand cond_class::code(CgenEnvironment *env) 
 { 
 	if (cgen_debug) std::cerr << "cond" << endl;
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
-	// TODO cond_class
-	return operand();
+	ValuePrinter vp(*(env->cur_stream));
+	
+	string label_then = env->new_label("then.", false);
+	string label_else = env->new_label("else.", false);
+	string label_endif = env->new_label("endif.", true); // increment for next block
+	
+	assert( then_exp->get_type()->equal_string(	// assertation for PA4
+		else_exp->get_type()->get_string(), else_exp->get_type()->get_len()
+	));
+	op_type result_type = ( string(then_exp->get_type()->get_string()).compare("Bool") == 0 )
+		? op_type(INT1) : op_type(INT32);
+	operand result_op = vp.alloca_mem( result_type );
+	
+	// logic
+	vp.branch_cond( pred->code(env), label_then, label_else );
+	vp.begin_block( label_then );
+		vp.store( then_exp->code(env), result_op );
+		vp.branch_uncond( label_endif );
+	vp.begin_block( label_else );
+		vp.store( else_exp->code(env), result_op );
+	vp.begin_block( label_endif );
+		
+	return vp.load( result_type, result_op );
 }
 
 operand loop_class::code(CgenEnvironment *env) 
 { 
 	if (cgen_debug) std::cerr << "loop" << endl;
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
-	// TODO loop_class
-	return operand();
+	ValuePrinter vp(*(env->cur_stream));
+
+	string label_loop = env->new_label("loop.", false);
+	string label_true = env->new_label("true.", false);
+	string label_false = env->new_label("false.", true); // increment for next block
+
+	vp.branch_uncond( label_loop );
+	vp.begin_block( label_loop );
+		operand pred_op = pred->code(env);
+	vp.branch_cond( pred_op, label_true, label_false );
+	vp.begin_block( label_true );
+		operand body_op = body->code(env);
+		vp.branch_uncond( label_loop );
+	vp.begin_block( label_false );
+
+	return operand(); // TODO loop_class is returning void right?
 } 
 
 operand block_class::code(CgenEnvironment *env) 
@@ -897,10 +929,25 @@ operand block_class::code(CgenEnvironment *env)
 operand let_class::code(CgenEnvironment *env) 
 { 
 	if (cgen_debug) std::cerr << "let" << endl;
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
-	// TODO let_class
-	return operand();
+	ValuePrinter vp(*(env->cur_stream));
+
+	// allocate var
+	op_type var_type = ( string(type_decl->get_string()).compare("Bool") == 0 )
+		? op_type(INT1) : op_type(INT32);
+	operand var = vp.alloca_mem(var_type);
+	env->add_local(identifier, var);
+
+	// code for init
+	operand init_op = init->code(env);
+	bool isExprEmpty = init_op.get_type().is_same_with( op_type(EMPTY) );
+	if( isExprEmpty ) {	// if empty, store with default value
+		init_op = var_type.is_same_with( op_type(INT1) )
+			? const_value(op_type(INT1), "false", true) : const_value(op_type(INT32), "0", true);
+	}
+	// store( RHS, LHS )
+	vp.store( init_op, var );
+	
+	return body->code(env);
 }
 
 operand plus_class::code(CgenEnvironment *env) 
@@ -928,9 +975,20 @@ operand divide_class::code(CgenEnvironment *env)
 { 
 	if (cgen_debug) std::cerr << "div" << endl;
 	ValuePrinter vp(*(env->cur_stream));
-	// TODO divide_class ; runtime error \
-	
-	return vp.div(e1->code(env), e2->code(env));
+
+	string label_err = env->new_label("diverr.", false);
+	string label_ok = env->new_label("div.", true);
+	operand e1_code = e1->code(env);
+	operand e2_code = e2->code(env);
+
+	operand denom_zero = vp.icmp( EQ, e2_code, int_value(0) );
+	vp.branch_cond( denom_zero, label_err, label_ok );
+	vp.begin_block(label_err);
+		operand err = 
+			vp.call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
+		vp.unreachable(); // TODO divide_class is it right?
+	vp.begin_block(label_ok);
+		return vp.div( e1_code, e2_code );
 }
 
 operand neg_class::code(CgenEnvironment *env) 
@@ -984,7 +1042,11 @@ operand object_class::code(CgenEnvironment *env)
 {
 	if (cgen_debug) std::cerr << "Object" << endl;
 	ValuePrinter vp(*(env->cur_stream));
-	return vp.load( op_type(VAR_ARG), *(env->lookup(name)) ); // TODO object_class check if vararg is right
+	
+	op_type obj_type = env->lookup(name)->get_type().is_same_with( op_type(INT32_PTR) )
+		? op_type(INT32) : op_type(INT1) ;
+	debug_(" Object type " + obj_type.get_name() , 4);
+	return vp.load( op_type(obj_type), *(env->lookup(name)) );
 }
 
 operand no_expr_class::code(CgenEnvironment *env) 

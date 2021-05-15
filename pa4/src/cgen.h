@@ -111,7 +111,6 @@ private:
 
 
 	// ADD CODE HERE
-	// TODO CgenNode header var
 
 
 public:
@@ -145,7 +144,6 @@ public:
 
 	// ADD CODE HERE
 	string get_type_name() { return string(name->get_string()); }
-	// TODO CgenNode public func
 
 
 private:
@@ -154,7 +152,6 @@ private:
 	void layout_features();
 
 	// ADD CODE HERE
-	// TODO  CgenNode private func
 
 };
 
@@ -179,7 +176,6 @@ private:
 
 	// ADD CODE HERE
 	CgenNode *cur_class;
-	// TODO CgenEnvironment var 
 
 
 public:
@@ -210,7 +206,6 @@ public:
 	// Must return the CgenNode for a class given the symbol of its name
 	CgenNode *type_to_class(Symbol t);
 	// ADD CODE HERE
-	// TODO  CgenEnvironment func
 	
 };
 
