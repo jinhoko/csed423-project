@@ -17,6 +17,7 @@
 #include "symtab.h"
 #include "value_printer.h"
 
+#define PA5 // TODO must delete
 //
 // CgenClassTable represents the top level of a Cool program, which is
 // basically a list of classes.  The class table is used to look up classes

@@ -20,29 +20,36 @@ typedef struct Bool_vtable Bool_vtable;
 
 /* class type definitions */
 struct Object {
-	/* ADD CODE HERE */
+	Object_vtable* vtblptr;
 };
 
 struct Int {
-	/* ADD CODE HERE */
+	Int_vtable* vtblptr;
+	int val;
 };
 
 struct Bool {
-	/* ADD CODE HERE */
+	Bool_vtable* vtblptr;
+	bool val;
 };
 
 struct String {
-	/* ADD CODE HERE */
+	String_vtable* vtblptr;
+	char* val;
 };
 
 struct IO {
-	/* ADD CODE HERE */
+	IO_vtable* vtblptr;
 };
 
 
 /* vtable type definitions */
 struct Object_vtable {
 	/* ADD CODE HERE */
+	// int tag?
+	// int null?
+	char* name;
+	// 4 methods;
 };
 
 struct IO_vtable {
@@ -59,12 +66,15 @@ struct Bool_vtable {
    
 struct String_vtable {
 	/* ADD CODE HERE */
+	
+
 };
 
 /* methods in class Object */
+Object* Object_new(void);
 Object* Object_abort(Object *self);
 const String* Object_type_name(Object *self);
-	/* ADD CODE HERE */
+Object* Object_copy(Object *self);
 
 /* methods in class IO */
 IO* IO_new(void);
@@ -75,12 +85,16 @@ String* IO_in_string(IO *self);
 Int* IO_in_int(IO *self);
 
 /* methods in class Int */
-	/* ADD CODE HERE */
+int* Int_new(void);
 
 
 /* methods in class Bool */
-	/* ADD CODE HERE */
+bool* Bool_new(void);
 
 
 /* methods in class String */
-	/* ADD CODE HERE */
+String* String_new(void);
+Int* String_length(String *s);
+String* String_concat(String *s1, String *s2);
+String* String_substr(String *s, Int *st, Int *en);
+
