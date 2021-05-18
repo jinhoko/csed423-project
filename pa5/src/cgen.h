@@ -153,6 +153,8 @@ private:
 	void layout_features();
 
 	// ADD CODE HERE
+	void layout_attributes( Symbol cl, vector<op_type>* types);
+	void layout_methods( Symbol cl, vector<op_type>* types, vector<const_value>* values );
 
 };
 

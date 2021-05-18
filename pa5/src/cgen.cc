@@ -29,6 +29,9 @@ void debug( string str ) {
 
 ValuePrinter* vp;
 
+bool attr_class::is_method( ) { return false; }
+bool method_class::is_method( ) { return true; }
+
 //////////////////////////////////////////////////////////////////////
 //
 // Symbols
@@ -76,6 +79,23 @@ EXTERN Symbol
 	prim_int,
 	prim_bool;
 
+op_type get_symbol_op_type( Symbol t, int ptr_level ) {
+	op_type type;
+	if( t == prim_int ) { type = op_type(INT32); }
+	else if( t == prim_bool ) { type = op_type(INT1); }
+	else if( t == prim_string ) { type = op_type(INT8_PTR); }
+	else type = op_type( string( t->get_string()), ptr_level );
+	return type;
+}
+
+op_type get_objsymbol_op_type( Symbol t, int ptr_level) {
+	op_type type;
+	if( t == Int ) { type = op_type(INT32); }
+	else if( t == Bool ) { type = op_type(INT1); }
+	//else if( t == String ) { type = op_type(INT8_PTR); }
+	else type = op_type( string( t->get_string()), ptr_level );
+	return type;
+}
 
 //********************************************************
 //
@@ -191,7 +211,6 @@ void CgenClassTable::setup_external_functions()
 #ifdef PA5
 
     //Setup external functions for built in object class functions
-	// TODO ADD setup_external_functions
     op_type objectp_type("Object", 1),
             intp_type("Int", 1),
             boolp_type("Bool", 1),
@@ -495,19 +514,7 @@ CgenNode *CgenClassTable::root()
 
 #ifndef PA5
 
-CgenNode* CgenClassTable::getMainmain(CgenNode* c)
-{
-	if (c && ! c->basic())
-		return c;                   // Found it!
-
-	List<CgenNode> *children = c->get_children();
-	for (List<CgenNode> *child = children; child; child = child->tl()) {
-		if (CgenNode* foundMain = this->getMainmain(child->hd()))
-			return foundMain;   // Propagate it up the recursive calls
-	}
-
-	return 0;                           // Make the recursion continue
-}
+assert(0 && "All PA4 implementations are deleted");
 
 #endif
 
@@ -545,9 +552,34 @@ CgenNode* CgenClassTable::getMainmain(CgenNode* c)
 void CgenClassTable::code_constants()
 {
 #ifdef PA5
-    // TODO code_constants
-    // produce String.0 / String.1 / ...
-	// ADD CODE HERE
+// 	@str.1 = internal constant [14 x i8] c"<basic class>\00"
+// @String.1 = constant %String {
+//         %String_vtable* @String_vtable_prototype,
+//         i8* getelementptr ([14 x i8], [14 x i8]* @str.1, i32 0, i32 0)
+
+	int size, idx, stridx;
+	for( size = stringtable.first() ; stringtable.more(size) ; size = stringtable.next(size) ) { }
+	
+	for( idx = size-1 ; idx >= 0 ; idx-=1 ) {	// reverse
+		
+		// str value
+		string obj_str = string(stringtable.lookup(idx)->get_string()) ;
+		const_value str_val ( op_arr_type(INT8, obj_str.size()+1), obj_str, true );
+		string str_name = "str."+itos(idx);
+		vp->init_constant( str_name, str_val );
+
+		// globally define String
+		// contents of "StringEntry::code_def"
+		vector<op_type> types;
+		vector<const_value> values;
+		types.push_back( op_type("String_vtable", 1) );
+		types.push_back( op_type(INT8_PTR) );
+		values.push_back( const_value( op_type("String_vtable", 1), "@String_vtable_prototype", false) );
+		values.push_back( const_value ( op_arr_type(INT8, obj_str.size()+1), "@"+str_name, false ) );
+		
+		vp->init_struct_constant( global_value( op_type("String"), "String."+itos(idx) ), types, values );
+
+	}
 #endif
 }
 
@@ -555,8 +587,7 @@ void CgenClassTable::code_constants()
 void StringEntry::code_def(ostream& s, CgenClassTable* ct)
 {
 #ifdef PA5
-	// ADD CODE HERE
-    // TODO string code_def
+	// Not using.
 #endif
 }
 
@@ -645,11 +676,7 @@ void CgenClassTable::code_module()
 	code_constants();
 
 #ifndef PA5
-	// This must be after code_module() since that emits constants
-	// needed by the code() method for expressions
-	CgenNode* mainNode = getMainmain(root());
-	debug_( "codeGenMainmain", 2);
-	mainNode->codeGenMainmain();
+	assert(0 && "All PA4 implementations are deleted");
 #endif
 	debug_( "code_main", 2);
 	code_main();
@@ -664,9 +691,11 @@ void CgenClassTable::code_module()
 #ifdef PA5
 void CgenClassTable::code_classes(CgenNode *c)
 {
-    // TODO code_classes ; call code_class for each class / recursively
-	// ADD CODE HERE
-
+	c->code_class();
+	List<CgenNode> *children = c->get_children();
+	for ( children ; children != NULL ; children = children->tl() ){
+		code_classes( children->hd() );
+	}
 }
 #endif
 
@@ -679,57 +708,36 @@ void CgenClassTable::code_main()
 {
 	ValuePrinter vp(*ct_stream);
 
+	// NOT USED IN PA5
 	// Make string before define
-	string _str = "Main_main() returned %d\n";
-	const_value _str_val ( op_arr_type(INT8, 25), _str, false );
-	vp.init_constant(".str", _str_val);
+	// string _str = "Main_main() returned %d\n";
+	// const_value _str_val ( op_arr_type(INT8, 25), _str, false );
+	// vp.init_constant(".str", _str_val);
 
 	// Define a function main that has no parameters and returns an i32
 	vp.define( op_type(INT32), "main", vector<operand>() );
 	// Define an entry basic block
 	vp.begin_block( "entry" );
+
+	// Call Main_new() to generate Main
+	operand result_Main_obj( op_type("Main", 1), "main.obj" );
+	vp.call(*ct_stream, vector<op_type>(), "Main_new", true, vector<operand>(), result_Main_obj );
+
 	// Call Main_main(). This returns int* for phase 1, Object for phase 2
-	operand result_Main_main = 
-		vp.call( vector<op_type>(), op_type(INT32), "Main_main", true, vector<operand>() );
+	operand result_Main_main( op_type("Object", 1), "main.retval" );
+	vector<op_type> result_Main_main_args_type;
+	vector<operand> result_Main_main_args;
+	result_Main_main_args_type.push_back( op_type("Main", 1) );
+	result_Main_main_args.push_back( result_Main_obj );
+	vp.call(*ct_stream, result_Main_main_args_type, "Main_main", true, result_Main_main_args, result_Main_main );
 
 #ifndef PA5
-
-	// Get the address of the string "Main_main() returned %d\n" using getelementptr 
-	operand _str_ptr = vp.getelementptr(
-		op_arr_type(INT8, 25),
-		global_value( op_arr_type(INT8_PTR, 25), ".str" , _str_val ),
-		int_value(0),
-		int_value(0),
-		op_type(INT8_PTR) 
-	);
-
-	// Call printf with the string address of "Main_main() returned %d\n"
-	// and the return value of Main_main() as its arguments
-	
-	vector<op_type> call_result_paramtypes;
-	call_result_paramtypes.push_back( op_type(INT8_PTR) );
-	call_result_paramtypes.push_back( op_type(VAR_ARG) ) ;
-	vector<operand> call_result_params;
-	call_result_params.push_back( _str_ptr );
-	call_result_params.push_back( result_Main_main );
-
-	operand call_result = vp.call(
-			call_result_paramtypes,
-			op_type(INT32),
-			"printf",
-			true,
-			call_result_params
-	);
-
-	// Insert return 0
-	vp.ret( int_value(0) );
-
+	assert(0 && "All PA4 implementations are deleted");
 #else
-    // TODO change phase 2
-	// Phase 2
-
+    
 #endif
 	// End define
+	vp.ret( int_value(0) );
 	vp.end_define();
 }
 
@@ -773,84 +781,173 @@ void CgenNode::set_parentnd(CgenNode *p)
 void CgenNode::setup(int tag, int depth)
 {
 	this->tag = tag;
+
 #ifdef PA5
-	layout_features();
-    // TODO CgenNode::setup
 
-    // define class type 
-    vp->type_define(name->get_string(), vector<op_type>() );
-    //
-    vp->end_define();
+	string class_name = string(name->get_string());
+	string vtable_name = class_name + "_vtable";
+	string vtable_prototype_name = vtable_name + "_prototype";
 
-    // define vtable type
-    string vtable_name = string(name->get_string()) + "_vtable";
-    vp->type_define( vtable_name, vector<op_type>() );
-    //
-    vp->end_define();
+	string class_name_obj = "str."+class_name;
+	int class_name_obj_len = class_name.size()+1;
+	const_value class_name_str ( op_arr_type(INT8, class_name_obj_len), class_name, true );
+	vp->init_constant( class_name_obj, class_name_str);
+	
+	const_value class_name_str_op (
+		op_arr_type(INT8, class_name_obj_len), "@"+class_name_obj, true
+	);
 
-    // vtable prototype
+    // define class type
+	vector<op_type> class_types;
+	class_types.push_back( op_type( vtable_name, 1) );
+	layout_attributes( name, &class_types );
+    vp->type_define( name->get_string(), class_types );
+
+    // define vtable type, values
+	vector<op_type> vtable_types;
+	vector<const_value> vtable_values;
+
+	// vtable layout
+	op_type new_func_type = op_func_type( op_type(class_name, 1), vector<op_type>() );
+	vtable_types.push_back( op_type(INT32) );					// 1 - tag
+	vtable_types.push_back( op_type(INT32) );					// 2 - address
+	vtable_types.push_back( op_type(INT8_PTR) );				// 3 - name
+	vtable_types.push_back( new_func_type );					// 4 - new
+	vtable_values.push_back( int_value(tag) );					// 1 - tag
+	vtable_values.push_back( int_value(tag) );					// TODO resolve
+	vtable_values.push_back( class_name_str_op );				// 3 - name
+	vtable_values.push_back(
+		const_value(new_func_type, "@"+class_name+"_new", true ) ); 	// 4 - new
+	layout_methods( name, &vtable_types, &vtable_values );			// 5~
+
+	
+    // vtable type/object definition
+	assert( vtable_types.size() == vtable_values.size() );
+	vp->type_define( vtable_name, vtable_types );
     vp->init_struct_constant(
-        global_value( op_type("Object_vtable"), "Object_vtable_prototype"),
-        vector<op_type>( 1, op_type(INT32) ),
-        vector<const_value>( 1,  int_value(1) )
+        global_value( op_type(vtable_name), vtable_prototype_name ),
+        vtable_types,
+        vtable_values
     );
     
-
 #endif
 }
 
 #ifdef PA5
+// Laying out the features involves creating a Function for each method
+// and assigning each attribute a slot in the class structure.
+void CgenNode::layout_features() { } // Not using.
+void CgenNode::layout_attributes( Symbol cl, vector<op_type>* types ) {
+	// recurse
+	if( parentnd != NULL ) { parentnd->layout_attributes( cl, types ); }
+	Feature f; int idx;
+	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
+		f = features->nth(idx);
+		f->add_attribute( cl, string(name->get_string()), types);
+	}
+}
+void attr_class::add_attribute( Symbol cl, string cname, vector<op_type>* types ) {	
+	types->push_back( get_symbol_op_type( type_decl, 0) );
+}
+void method_class::add_attribute( Symbol cl, string cname,  vector<op_type>* types ) { return; }
+
+void CgenNode::layout_methods( Symbol cl, vector<op_type>* types, vector<const_value>* values ) {
+	// recurse
+	if( parentnd != NULL ) { parentnd->layout_methods( cl, types, values ); }
+	Feature f; int idx;
+	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
+		f = features->nth(idx);
+		f->add_method( cl, string(name->get_string()), types, values);
+	}
+}
+void method_class::add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ) {
+	
+	string target_class_name = cl->get_string();
+	bool isInheritedMethod = target_class_name.compare( cname ) != 0;
+	
+	// result type
+	op_type result_type = (return_type == SELF_TYPE)
+							? op_type( target_class_name, 1 ) : get_objsymbol_op_type( return_type, 1 ) ;
+	op_type orig_result_type = (return_type == SELF_TYPE)
+							? op_type( cname, 1 ) : get_objsymbol_op_type( return_type, 1 ) ;
+
+	// args
+	vector<op_type> args;
+	vector<op_type> orig_args;
+	args.push_back( op_type(target_class_name, 1) );	// self
+	orig_args.push_back( op_type(cname, 1) );
+	Formal f; int idx;
+	for( idx = formals->first() ; formals->more(idx) ; idx = formals->next(idx) ) {
+		f = formals->nth(idx);
+		args.push_back( get_objsymbol_op_type( f->get_type_decl() , 1 ) );
+		orig_args.push_back( get_objsymbol_op_type( f->get_type_decl() , 1 ) );
+	}
+	op_type t = op_func_type( result_type , args );
+	op_type orig_t = op_func_type( orig_result_type, orig_args );
+
+	// value
+	const_value v =	const_value(t, "@"+cname+"_"+name->get_string(), true );
+	if( isInheritedMethod ) {
+		v = casted_value(t, "@"+cname+"_"+name->get_string(), orig_t);
+	}
+	types->push_back(t);
+	values->push_back(v);
+}
+void attr_class::add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ){ return; }
+
 //
 // Class codegen. This should performed after every class has been setup.
 // Generate code for each method of the class.
 //
 void CgenNode::code_class()
 {
+	// TODO code_class
 	// No code generation for basic classes. The runtime will handle that.
 	if (basic())
 		return;
+
+	debug_( "code_class "+ string(name->get_string()) , 4);
 	
-	// ADD CODE HERE
-    // TODO CgenNode::setup
+	CgenEnvironment* env = new CgenEnvironment(*(class_table->ct_stream), this);
+	string class_name = string( name->get_string() );
+
+	// methods
+	Feature f; int idx;
+	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) {
+		f = features->nth(idx);
+		if( f->is_method() ) { f->code(env); }
+	}
+
+	//
+	//	Class_new ; features
+	//
+
+	// define class_new
+	op_type new_rettype( class_name, 1 );
+	string new_name_str = class_name+"_new";
+	vp->define(new_rettype, new_name_str, vector<operand>() );
+
+	// block entry
+	vp->begin_block("entry");
+	// TODO code_class - class_new ; kinda complicated
+	// init
+	// for each features init
+	// return something
+	// block abort
+	vp->begin_block("abort");
+	vp->call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
+	vp->unreachable();
+	// end define
+	vp->end_define();
 }
 
-// Laying out the features involves creating a Function for each method
-// and assigning each attribute a slot in the class structure.
-void CgenNode::layout_features()
-{
-	// ADD CODE HERE
-    // TODO CgenNode::layout_features()
-
-
-}
 #else
 
-// 
-// code-gen function main() in class Main
-//
-void CgenNode::codeGenMainmain()
-{
-	// In Phase 1, this can only be class Main. Get method_class for main().
-	assert(std::string(this->name->get_string()) == std::string("Main"));
-	method_class* mainMethod = (method_class*) features->nth(features->first());
-
-	// Generally what you need to do are:
-	// -- setup or create the environment, env, for translating this method
-	// -- invoke mainMethod->code(env) to translate the method
-
-	ValuePrinter vp(*class_table->ct_stream);
-	CgenEnvironment* env = new CgenEnvironment(*(class_table->ct_stream), this);
-
-	vp.define( op_type(INT32), "Main_main", vector<operand>() );
-	vp.begin_block("entry");
-
-	mainMethod->code(env); // returns here
-
-	vp.end_define();
-
-}
+assert(0 && "All PA4 implementations are deleted");
 
 #endif
+
+
 
 //
 // CgenEnvironment functions
@@ -951,13 +1048,26 @@ operand get_class_tag(operand src, CgenNode *src_cls, CgenEnvironment *env) {
 // 
 void method_class::code(CgenEnvironment *env)
 {
+	// TODO method_class::code
 	if (cgen_debug) std::cerr << "method" << endl;
 
 	ValuePrinter vp(*(env->cur_stream));
+	
+	// vp.define(  )
+	// block entry
+	// vp.begin_block("entry");
+		// %tmp.1 = alloca %Main*
+        //store %Main* %self, %Main** %tmp.1
+        //%tmp.2 = alloca i32
+		// store i32 %x, i32* %tmp.2
+	//vp.ret( expr->code(env) );
 
-	// Return expr value
-	vp.ret( expr->code(env) );
+	// block abort
+	// vp.begin_block("abort");
+	// vp.call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
+	// vp.unreachable();
 }
+
 
 //
 // Codegen for expressions.  Note that each expression has a value.
@@ -1171,9 +1281,18 @@ operand no_expr_class::code(CgenEnvironment *env)
 //*****************************************************************
 
 // TODO operands
-operand static_dispatch_class::code(CgenEnvironment *env) 
-{ 
-	if (cgen_debug) std::cerr << "static dispatch" << endl;
+void attr_class::code(CgenEnvironment *env)
+{
+#ifndef PA5
+	assert(0 && "Unsupported case for phase 1");
+#else
+	// ADD CODE HERE
+#endif
+}
+
+operand string_const_class::code(CgenEnvironment *env) 
+{
+	if (cgen_debug) std::cerr << "string_const" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
@@ -1183,9 +1302,9 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	return operand();
 }
 
-operand string_const_class::code(CgenEnvironment *env) 
-{
-	if (cgen_debug) std::cerr << "string_const" << endl;
+operand static_dispatch_class::code(CgenEnvironment *env) 
+{ 
+	if (cgen_debug) std::cerr << "static dispatch" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
@@ -1244,16 +1363,6 @@ operand isvoid_class::code(CgenEnvironment *env)
 	return operand();
 }
 
-// Create the LLVM Function corresponding to this method.
-void method_class::layout_feature(CgenNode *cls) 
-{
-#ifndef PA5
-	assert(0 && "Unsupported case for phase 1");
-#else
-	// ADD CODE HERE
-#endif
-}
-
 // If the source tag is >= the branch tag and <= (max child of the branch class) tag,
 // then the branch is a superclass of the source
 operand branch_class::code(operand expr_val, operand tag,
@@ -1267,22 +1376,26 @@ operand branch_class::code(operand expr_val, operand tag,
 	return operand();
 }
 
+
+//////////////////////////////////
+//////////////////////////////////
+
+// Create the LLVM Function corresponding to this method.
+void method_class::layout_feature(CgenNode *cls) 
+{
+#ifndef PA5
+	assert(0 && "Unsupported case for phase 1");
+#else
+	// Not Using.
+#endif
+}
+
 // Assign this attribute a slot in the class structure
 void attr_class::layout_feature(CgenNode *cls)
 {
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// ADD CODE HERE
+	// Not Using.
 #endif
 }
-
-void attr_class::code(CgenEnvironment *env)
-{
-#ifndef PA5
-	assert(0 && "Unsupported case for phase 1");
-#else
-	// ADD CODE HERE
-#endif
-}
-

@@ -18,22 +18,34 @@ const char IO_string[] 		= "IO";
 const char default_string[]	= "";
 
 /* Class vtable prototypes */
-const Object_vtable Object_vtable_prototype = {
-	/* ADD CODE HERE */
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-};
-
-/* ADD CODE HERE FOR MORE VTABLE PROTOTYPES */
-
+// will be linked from the cgen program.
+extern const Object_vtable Object_vtable_prototype;
+extern const String_vtable String_vtable_prototype;
+extern const IO_vtable IO_vtable_prototype;
+extern const Int_vtable Int_vtable_prototype;
+extern const Bool_vtable Bool_vtable_prototype;
 
 /*
-// Methods in class object (only some are provided to you)
+	All Class_new methods // TODO _new
+*/
+// Object* Object_new(void) {
+
+// }
+// IO* IO_new(void) {
+
+// }
+// Int* Int_new(void) {
+
+// }
+// Bool* Bool_new(void) {
+
+// }
+// String* String_new(void) {
+
+// }
+
+/*
+// Methods in class object
 */
 Object* Object_abort(Object *self)
 {
@@ -54,12 +66,12 @@ const String* Object_type_name(Object *self)
 	return s;
 }
 
+// Object* Object_copy(Object *self) { // TODO Object_copy
 
-/* ADD CODE HERE FOR MORE METHODS OF CLASS OBJECT */
-
+// }
 
 /*
-// Methods in class IO (only some are provided to you)
+// Methods in class IO
 */
 
 IO* IO_out_string(IO *self, String* x)
@@ -164,10 +176,21 @@ Int* IO_in_int(IO *self)
 	return x;
 }
 
+// void IO_init(IO *self) { // TODO IO_init
 
-/* ADD CODE HERE FOR MORE METHODS OF CLASS IO */
-
-
-/* ADD CODE HERE FOR METHODS OF OTHER BUILTIN CLASSES */
+// }
 
 
+/*
+// Methods in class String // TODO String x3
+*/
+
+// Int* String_length(String *s) {
+
+// }
+// String* String_concat(String *s1, String *s2) {
+
+// }
+// String* String_substr(String *s, Int *st, Int *en) {
+
+// }

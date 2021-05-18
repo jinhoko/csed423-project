@@ -79,13 +79,20 @@ void dump_with_types(ostream&,int);
 #define Feature_EXTRAS                     		\
 virtual void dump_with_types(ostream&,int) = 0; 	\
 virtual void layout_feature(CgenNode *cls) = 0;		\
-virtual void code(CgenEnvironment *env) = 0;
+virtual void code(CgenEnvironment *env) = 0; \
+virtual void add_attribute( Symbol cl, string cname, vector<op_type>* types ) = 0; \
+virtual void add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values )=0; \
+virtual bool is_method( )=0;
+
 
 
 #define Feature_SHARED_EXTRAS                           \
 void dump_with_types(ostream&,int);  			\
 void layout_feature(CgenNode *cls);			\
-void code(CgenEnvironment *env);
+void code(CgenEnvironment *env); \
+void add_attribute( Symbol cl, string cname, vector<op_type>* types ); \
+void add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ); \
+bool is_method(); 
 
 
 #define method_EXTRAS			\

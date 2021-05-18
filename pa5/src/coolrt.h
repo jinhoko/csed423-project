@@ -45,29 +45,68 @@ struct IO {
 
 /* vtable type definitions */
 struct Object_vtable {
-	/* ADD CODE HERE */
-	// int tag?
-	// int null?
+	int tag;
+	int address;
 	char* name;
-	// 4 methods;
+	Object* (*Object_new)(void);
+	
+	Object* (*Object_abort)(Object *self);
+	const String* (*Object_type_name)(Object *self);
+	Object* (*Object_copy)(Object *self);
 };
 
 struct IO_vtable {
-	/* ADD CODE HERE */
+	int tag;
+	int address; 
+	char* name;
+	IO* (*IO_new)(void);
+
+	Object* (*Object_abort)(IO *self);				// Object
+	const String* (*Object_type_name)(IO *self);	// Object
+	IO* (*Object_copy)(IO *self);					// Object
+
+	void (*IO_init)(IO *self);
+	IO* (*IO_out_string)(IO *self, String *x);
+	IO* (*IO_out_int)(IO *self, Int *x);
+	String* (*IO_in_string)(IO *self);
+	Int* (*IO_in_int)(IO *self);
 };
 
 struct Int_vtable {
-	/* ADD CODE HERE */
+	int tag;
+	int address;
+	char* name;
+	Int* (*Int_new)(void);	
+
+	Object* (*Object_abort)(Int *self);				// Object
+	const String* (*Object_type_name)(Int *self);	// Object
+	Int* (*Object_copy)(Int *self);					// Object
 };
 
 struct Bool_vtable {
-	/* ADD CODE HERE */
+	int tag;
+	int address;
+	char* name;
+	Bool* (*Bool_new)(void);
+
+	Object* (*Object_abort)(Bool *self);				// Object
+	const String* (*Object_type_name)(Bool *self);		// Object
+	Bool* (*Object_copy)(Bool *self);					// Object
 };
    
 struct String_vtable {
-	/* ADD CODE HERE */
-	
+	int tag;
+	int address;
+	char* name;
+	String* (*String_new)(void);
 
+	Object* (*Object_abort)(String *self);					// Object
+	const String* (*Object_type_name)(String *self);		// Object
+	String* (*Object_copy)(String *self);					// Object
+
+	Int* (*String_length)(String *s);
+	String* (*String_concat)(String *s1, String *s2);
+	String* (*String_substr)(String *s, Int *st, Int *en);
 };
 
 /* methods in class Object */
@@ -85,11 +124,11 @@ String* IO_in_string(IO *self);
 Int* IO_in_int(IO *self);
 
 /* methods in class Int */
-int* Int_new(void);
+Int* Int_new(void);
 
 
 /* methods in class Bool */
-bool* Bool_new(void);
+Bool* Bool_new(void);
 
 
 /* methods in class String */
