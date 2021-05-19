@@ -80,23 +80,32 @@ void dump_with_types(ostream&,int);
 virtual void dump_with_types(ostream&,int) = 0; 	\
 virtual void layout_feature(CgenNode *cls) = 0;		\
 virtual void code(CgenEnvironment *env) = 0; \
-virtual void add_attribute( Symbol cl, string cname, vector<op_type>* types ) = 0; \
+virtual void add_attribute( Symbol cl, string cname, vector<op_type>* types, bool basic ) = 0; \
 virtual void add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values )=0; \
-virtual bool is_method( )=0;
-
+virtual bool is_method( )=0; \
+virtual Symbol get_type()=0; \
+virtual Expression get_expr()=0; \
+virtual Symbol get_name() = 0;\
 
 
 #define Feature_SHARED_EXTRAS                           \
 void dump_with_types(ostream&,int);  			\
 void layout_feature(CgenNode *cls);			\
 void code(CgenEnvironment *env); \
-void add_attribute( Symbol cl, string cname, vector<op_type>* types ); \
+void add_attribute( Symbol cl, string cname, vector<op_type>* types, bool basic ); \
 void add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ); \
-bool is_method(); 
+bool is_method(); \
+Symbol get_name(); \
 
 
 #define method_EXTRAS			\
-virtual Symbol get_return_type() { return return_type; }
+virtual Symbol get_return_type() { return return_type; } \
+Symbol get_type() { return return_type; } \
+Expression get_expr() { return expr; }
+
+#define attr_EXTRAS \
+Symbol get_type() { return type_decl; } \
+Expression get_expr() { return init; }
 
 #define Formal_EXTRAS                              \
 virtual Symbol get_type_decl() = 0;                /* ## */ \

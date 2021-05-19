@@ -110,11 +110,11 @@ private:
 	int tag;
 	int max_child;
 
-
-	// ADD CODE HERE
-
-
 public:
+
+	cool::SymbolTable<Symbol,int>* method_list;	// ADDED
+	int method_list_idx;						// ADDED ; starts from 0
+
 	// COMPLETE FUNCTIONS
 
 	// Relationships with other nodes in the tree
@@ -179,9 +179,11 @@ private:
 
 	// ADD CODE HERE
 	CgenNode *cur_class;
-
-
+	
 public:
+
+	void enterscope();// ADDED
+
 	std::ostream *cur_stream;
 
 	// fresh name generation functions
@@ -198,8 +200,24 @@ public:
 
 	CgenEnvironment(ostream &strea, CgenNode *cur_class);
 
+	/*
+	 * LOGIC CHANGED
+	 *  - if not found from lookup table,
+	 *  - and then find from self.attributes
+	 */
+	operand *lookup(Symbol name)	{
 
-	operand *lookup(Symbol name)	{ return var_table.lookup(name); }
+		operand* lookup_result = var_table.lookup(name);
+		if( lookup_result == NULL ) {		
+			// TODO write ♥
+			// search for self.attribute
+				// if no exist, assert false
+			// getelemptr ; Object_new method chamgo
+			// load
+		}
+		return lookup_result;
+		
+	}
     
 	CgenNode *get_class() { return cur_class; }
 	void set_class(CgenNode *c) { cur_class = c; }

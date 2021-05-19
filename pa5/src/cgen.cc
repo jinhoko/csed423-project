@@ -10,7 +10,7 @@
 #include <string>
 #include <sstream>
 
-#define PA5; // TODO must delete
+#define PA5; // TODO must delete ★ ♥
 // 
 extern int cgen_debug;
 
@@ -31,6 +31,8 @@ ValuePrinter* vp;
 
 bool attr_class::is_method( ) { return false; }
 bool method_class::is_method( ) { return true; }
+Symbol attr_class::get_name() { return name; }
+Symbol method_class::get_name() { return name; }
 
 //////////////////////////////////////////////////////////////////////
 //
@@ -90,11 +92,40 @@ op_type get_symbol_op_type( Symbol t, int ptr_level ) {
 
 op_type get_objsymbol_op_type( Symbol t, int ptr_level) {
 	op_type type;
-	if( t == Int ) { type = op_type(INT32); }
-	else if( t == Bool ) { type = op_type(INT1); }
+	if( t == Int ) {
+		type = op_type(INT32);
+	}
+	else if( t == Bool ) { 
+		type = op_type(INT1);
+	}
 	//else if( t == String ) { type = op_type(INT8_PTR); }
 	else type = op_type( string( t->get_string()), ptr_level );
 	return type;
+}
+
+op_type get_objsymbol_ptr_op_type( Symbol t) {
+	op_type type;
+	if( t == Int ) {
+		type = op_type(INT32_PTR);
+	}
+	else if( t == Bool ) { 
+		type = op_type(INT1_PTR);
+	}
+	//else if( t == String ) { type = op_type(INT8_PTR); }	// other types should be called as double pointer
+	else type = op_type( string( t->get_string()), 2 );
+	return type;
+}
+
+operand get_default_value( op_type type ) {
+	if( type.is_same_with( op_type(INT1) ) ) {				// Bool
+		return const_value(op_type(INT1), "false", true);
+	} else if( type.is_same_with( op_type(INT32) ) ){		// Int
+		return const_value(op_type(INT32), "0", true);
+	} else if( type.is_same_with( op_type( "String", 0 ) )){	// String												// String
+		return vp->call( vector<op_type>(), op_type("String", 1), "String_new", true, vector<operand>() );
+	} else {
+		return null_value( type);
+	}
 }
 
 //********************************************************
@@ -752,8 +783,9 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTable *ct)
 : class__class((const class__class &) *nd), 
   parentnd(0), children(0), basic_status(bstatus), class_table(ct), tag(-1)
 { 
-	// ADD CODE HERE
-    
+	// ADDED
+	method_list = new cool::SymbolTable<Symbol,int>();
+	method_list_idx = 0;
 }
 
 void CgenNode::add_child(CgenNode *n)
@@ -801,6 +833,10 @@ void CgenNode::setup(int tag, int depth)
 	vector<op_type> class_types;
 	class_types.push_back( op_type( vtable_name, 1) );
 	layout_attributes( name, &class_types );
+	// TODO ♥ here, should also maintain attribute table
+	//	eg attr_list -> input : symbol output : type, idx in attrtable
+	// also need to rewrite methodtable
+	// eg method_list- > input : symbol output : intype argtypes idx in methodlist
     vp->type_define( name->get_string(), class_types );
 
     // define vtable type, values
@@ -809,17 +845,18 @@ void CgenNode::setup(int tag, int depth)
 
 	// vtable layout
 	op_type new_func_type = op_func_type( op_type(class_name, 1), vector<op_type>() );
-	vtable_types.push_back( op_type(INT32) );					// 1 - tag
-	vtable_types.push_back( op_type(INT32) );					// 2 - address
-	vtable_types.push_back( op_type(INT8_PTR) );				// 3 - name
-	vtable_types.push_back( new_func_type );					// 4 - new
-	vtable_values.push_back( int_value(tag) );					// 1 - tag
+	vtable_types.push_back( op_type(INT32) );					// 0 - tag
+	vtable_types.push_back( op_type(INT32) );					// 1 - address
+	vtable_types.push_back( op_type(INT8_PTR) );				// 2 - name
+	vtable_types.push_back( new_func_type );					// 3 - new
+	vtable_values.push_back( int_value(tag) );					// 0 - tag
 	vtable_values.push_back( int_value(tag) );					// TODO resolve
-	vtable_values.push_back( class_name_str_op );				// 3 - name
-	vtable_values.push_back(
-		const_value(new_func_type, "@"+class_name+"_new", true ) ); 	// 4 - new
-	layout_methods( name, &vtable_types, &vtable_values );			// 5~
+	vtable_values.push_back( class_name_str_op );				// 2 - name
+	vtable_values.push_back(									// 3 - new
+		const_value(new_func_type, "@"+class_name+"_new", true ) ); 	
 
+	method_list_idx = 4; 										// will start from 4 
+	layout_methods( name, &vtable_types, &vtable_values );		// 4~
 	
     // vtable type/object definition
 	assert( vtable_types.size() == vtable_values.size() );
@@ -829,6 +866,7 @@ void CgenNode::setup(int tag, int depth)
         vtable_types,
         vtable_values
     );
+	
     
 #endif
 }
@@ -843,21 +881,27 @@ void CgenNode::layout_attributes( Symbol cl, vector<op_type>* types ) {
 	Feature f; int idx;
 	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
 		f = features->nth(idx);
-		f->add_attribute( cl, string(name->get_string()), types);
+		f->add_attribute( cl, string(name->get_string()), types, basic());
 	}
 }
-void attr_class::add_attribute( Symbol cl, string cname, vector<op_type>* types ) {	
-	types->push_back( get_symbol_op_type( type_decl, 0) );
+void attr_class::add_attribute( Symbol cl, string cname, vector<op_type>* types, bool basic ) {	
+	if( basic ) {
+		types->push_back( get_symbol_op_type( type_decl, 1) );
+	} else {
+		types->push_back( get_objsymbol_op_type( type_decl, 1) );
+	}
 }
-void method_class::add_attribute( Symbol cl, string cname,  vector<op_type>* types ) { return; }
+void method_class::add_attribute( Symbol cl, string cname,  vector<op_type>* types, bool basic ) { return; }
 
 void CgenNode::layout_methods( Symbol cl, vector<op_type>* types, vector<const_value>* values ) {
 	// recurse
 	if( parentnd != NULL ) { parentnd->layout_methods( cl, types, values ); }
 	Feature f; int idx;
+	method_list->enterscope();
 	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
 		f = features->nth(idx);
 		f->add_method( cl, string(name->get_string()), types, values);
+		method_list->addid( f->get_name(), new int(method_list_idx++) );
 	}
 }
 void method_class::add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ) {
@@ -901,38 +945,90 @@ void attr_class::add_method( Symbol cl, string cname, vector<op_type>* types, ve
 //
 void CgenNode::code_class()
 {
-	// TODO code_class
 	// No code generation for basic classes. The runtime will handle that.
-	if (basic())
-		return;
+	if (basic()) return;
 
 	debug_( "code_class "+ string(name->get_string()) , 4);
 	
-	CgenEnvironment* env = new CgenEnvironment(*(class_table->ct_stream), this);
 	string class_name = string( name->get_string() );
-
 	// methods
 	Feature f; int idx;
+	CgenEnvironment* method_env;
 	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) {
 		f = features->nth(idx);
-		if( f->is_method() ) { f->code(env); }
+		method_env = new CgenEnvironment( *(class_table->ct_stream), this );
+		if( f->is_method() ) { f->code(method_env); }
 	}
 
-	//
-	//	Class_new ; features
-	//
+	// Class_new ; features
 
+	// ENV structure
+	// - self
+	//   - expr
+	CgenEnvironment* instance_env = new CgenEnvironment( *(class_table->ct_stream), this );
+	
 	// define class_new
 	op_type new_rettype( class_name, 1 );
 	string new_name_str = class_name+"_new";
 	vp->define(new_rettype, new_name_str, vector<operand>() );
-
 	// block entry
 	vp->begin_block("entry");
-	// TODO code_class - class_new ; kinda complicated
-	// init
-	// for each features init
-	// return something
+	// get vtable
+	operand vtbl_ptr =
+		vp->getelementptr(
+			op_type(class_name+"_vtable", 0),
+			global_value( op_type(class_name+"_vtable", 1), class_name+"_vtable_prototype"),
+			int_value(0),
+			int_value(1),
+			op_type(INT32_PTR)  );
+	operand vtbl_ptr_val = vp->load( op_type(INT32), vtbl_ptr );
+	// call malloc
+	vector<op_type> malloc_arg_types;
+	vector<operand> malloc_args;
+	malloc_arg_types.push_back( op_type(INT32) );
+	malloc_args.push_back( vtbl_ptr_val );
+	operand malloc_ptr = vp->call( malloc_arg_types, op_type(INT8_PTR), "malloc", true, malloc_args );
+	// bitcast
+	operand bitcast_ptr = vp->bitcast( malloc_ptr, op_type(class_name, 1) );
+	// store vtable
+	operand main_ptr = vp->getelementptr(
+		op_type(class_name, 0),
+			bitcast_ptr,
+			int_value(0),
+			int_value(0),
+			op_type(class_name+"_vtable", 2)  );
+	vp->store(
+		operand(op_type(class_name+"_vtable", 1), class_name+"_vtable_prototype"  ),
+		main_ptr
+	);
+	operand main_ptr_addr = vp->alloca_mem( op_type(class_name, 1) );
+	vp->store( bitcast_ptr, main_ptr_addr );
+	instance_env->add_local( self, main_ptr_addr );
+
+	// FIRST PASS ; add all members' getelemptr
+	operand attr_ptr, attr_ptr_silent;
+	int feature_idx = 0;
+	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) {
+		f = features->nth(idx);
+		if( !( f->is_method() ) ) {
+			feature_idx+=1;
+			attr_ptr = vp->getelementptr(
+				op_type( class_name	, 0),
+				bitcast_ptr,
+				int_value(0),
+				int_value(feature_idx),
+				get_objsymbol_ptr_op_type( f->get_type() )
+			);
+			operand expr_op = f->get_expr()->code(instance_env);
+			bool isExprEmpty = expr_op.get_type().is_same_with( op_type(EMPTY) );
+			if( isExprEmpty ) {	// if empty, store with default value
+				expr_op = get_default_value( get_objsymbol_op_type( f->get_type(), 0) );
+			}
+			vp->store( expr_op, attr_ptr);
+		}
+	}
+
+	vp->ret( bitcast_ptr );
 	// block abort
 	vp->begin_block("abort");
 	vp->call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
@@ -993,8 +1089,12 @@ const std::string CgenEnvironment::new_label(const std::string& prefix,
 	return prefix + suffix;
 }
 
-void CgenEnvironment::add_local(Symbol name, operand &vb) {
+void CgenEnvironment::enterscope() {
 	var_table.enterscope();
+}
+
+void CgenEnvironment::add_local(Symbol name, operand &vb) {
+	//var_table.enterscope();
 	var_table.addid(name, &vb);
 }
 
@@ -1048,24 +1148,49 @@ operand get_class_tag(operand src, CgenNode *src_cls, CgenEnvironment *env) {
 // 
 void method_class::code(CgenEnvironment *env)
 {
-	// TODO method_class::code
 	if (cgen_debug) std::cerr << "method" << endl;
 
 	ValuePrinter vp(*(env->cur_stream));
-	
-	// vp.define(  )
+
+	// ENV structure
+	// - self
+	// - parameters
+	//		- expr
+
+	// vp.define()
+	string class_name = env->get_class()->get_name()->get_string();
+	string method_name = string( class_name ) + "_" + name->get_string();
+	vector<operand> method_args;
+	operand self_op = operand( op_type(class_name, 1), "self" );
+	method_args.push_back( self_op );	// self
+// SCOPE 1
+	env->enterscope();
+	Formal f; int idx;
+	for( idx = formals->first() ; formals->more(idx); idx = formals->next(idx) ) {
+		f = formals->nth(idx);
+		op_type arg_type = get_objsymbol_op_type( f->get_type_decl() , 1 );
+		operand arg = operand(arg_type, string(f->get_name()-> get_string()) );
+		method_args.push_back( arg );
+		env->add_local( f->get_name(), arg );
+	}
+	vp.define( get_objsymbol_op_type( get_return_type(), 1), method_name, method_args );
 	// block entry
-	// vp.begin_block("entry");
-		// %tmp.1 = alloca %Main*
-        //store %Main* %self, %Main** %tmp.1
-        //%tmp.2 = alloca i32
-		// store i32 %x, i32* %tmp.2
+	vp.begin_block("entry");
+	for( idx = 0; idx < method_args.size() ; idx+=1 ) {
+		operand addr = vp.alloca_mem( method_args[idx].get_type() );
+		vp.store( method_args[idx], addr );
+	}
+// SCOPE 2
+	env->enterscope();
+	vp.ret( operand() );	// TODO change code after finish
 	//vp.ret( expr->code(env) );
 
 	// block abort
-	// vp.begin_block("abort");
-	// vp.call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
-	// vp.unreachable();
+	vp.begin_block("abort");
+	vp.call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
+	vp.unreachable();
+
+	vp.end_define();
 }
 
 
@@ -1154,7 +1279,7 @@ operand let_class::code(CgenEnvironment *env)
 	op_type var_type = ( string(type_decl->get_string()).compare("Bool") == 0 )
 		? op_type(INT1) : op_type(INT32);
 	operand var = vp.alloca_mem(var_type);
-	env->add_local(identifier, var);
+	env->add_local(identifier, var); // TODO need to enterscope / exitscope 
 
 	// code for init
 	operand init_op = init->code(env);
@@ -1271,7 +1396,7 @@ operand object_class::code(CgenEnvironment *env)
 operand no_expr_class::code(CgenEnvironment *env) 
 {
 	if (cgen_debug) std::cerr << "No_expr" << endl;
-	return operand();
+	return operand(); // this returns operand with empty
 }
 
 //*****************************************************************
@@ -1279,16 +1404,6 @@ operand no_expr_class::code(CgenEnvironment *env)
 // but these functions must be defined because they are declared as
 // methods via the Expression_SHARED_EXTRAS hack.
 //*****************************************************************
-
-// TODO operands
-void attr_class::code(CgenEnvironment *env)
-{
-#ifndef PA5
-	assert(0 && "Unsupported case for phase 1");
-#else
-	// ADD CODE HERE
-#endif
-}
 
 operand string_const_class::code(CgenEnvironment *env) 
 {
@@ -1310,6 +1425,21 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 #else
 	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
 	// MORE MEANINGFUL
+
+	// TODO static dispatch
+// 	%tmp.1 = load %Main*, %Main** %tmp.0
+//         %tmp.2 = icmp eq %Main* %tmp.1, null
+//         br i1 %tmp.2, label %abort, label %ok.0
+
+// ok.0:
+//         %tmp.3 = getelementptr %Main, %Main* %tmp.1, i32 0, i32 0
+//         %tmp.4 = load %Main_vtable*, %Main_vtable** %tmp.3
+//         %tmp.5 = getelementptr %Main_vtable, %Main_vtable* %tmp.4, i32 0, i32 8
+//         %tmp.6 = load %Main* (%Main*,i32) *, %Main* (%Main*,i32) ** %tmp.5
+//         %tmp.7 = call %Main*(%Main*, i32 ) %tmp.6( %Main* %tmp.1, i32 3 )
+
+
+
 #endif
 	return operand();
 }
@@ -1376,7 +1506,7 @@ operand branch_class::code(operand expr_val, operand tag,
 	return operand();
 }
 
-
+//////////////////////////////////
 //////////////////////////////////
 //////////////////////////////////
 
@@ -1397,5 +1527,14 @@ void attr_class::layout_feature(CgenNode *cls)
 	assert(0 && "Unsupported case for phase 1");
 #else
 	// Not Using.
+#endif
+}
+
+void attr_class::code(CgenEnvironment *env)
+{
+#ifndef PA5
+	assert(0 && "Unsupported case for phase 1");
+#else
+	// Not using.
 #endif
 }
