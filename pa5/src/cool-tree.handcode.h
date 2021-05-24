@@ -80,8 +80,8 @@ void dump_with_types(ostream&,int);
 virtual void dump_with_types(ostream&,int) = 0; 	\
 virtual void layout_feature(CgenNode *cls) = 0;		\
 virtual void code(CgenEnvironment *env) = 0; \
-virtual void add_attribute( Symbol cl, string cname, vector<op_type>* types, bool basic ) = 0; \
-virtual void add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values )=0; \
+virtual void add_attribute( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, bool basic ) = 0; \
+virtual void add_method( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values )=0; \
 virtual bool is_method( )=0; \
 virtual Symbol get_type()=0; \
 virtual Expression get_expr()=0; \
@@ -92,8 +92,8 @@ virtual Symbol get_name() = 0;\
 void dump_with_types(ostream&,int);  			\
 void layout_feature(CgenNode *cls);			\
 void code(CgenEnvironment *env); \
-void add_attribute( Symbol cl, string cname, vector<op_type>* types, bool basic ); \
-void add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ); \
+void add_attribute( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, bool basic ); \
+void add_method( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ); \
 bool is_method(); \
 Symbol get_name(); \
 

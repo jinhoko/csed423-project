@@ -112,9 +112,14 @@ private:
 
 public:
 
-	cool::SymbolTable<Symbol,int>* method_list;	// ADDED
-	int method_list_idx;						// ADDED ; starts from 0
+	cool::SymbolTable<Symbol,int>* methodtable_idx;						// ADDED
+	cool::SymbolTable<Symbol, op_type>* methodtable_return_type;		// ADDED
+	cool::SymbolTable<Symbol, vector<op_type> >* methodtable_arg_types;	// ADDED
+	int methodtable_idx_cnt;											// ADDED ; starts from 0
 
+	cool::SymbolTable<Symbol, int>* attrtable_idx;						// ADDED
+	cool::SymbolTable<Symbol, op_type>* attrtable_type;					// ADDED
+	int attrtable_idx_cnt;
 	// COMPLETE FUNCTIONS
 
 	// Relationships with other nodes in the tree
@@ -153,8 +158,8 @@ private:
 	void layout_features();
 
 	// ADD CODE HERE
-	void layout_attributes( Symbol cl, vector<op_type>* types);
-	void layout_methods( Symbol cl, vector<op_type>* types, vector<const_value>* values );
+	void layout_attributes( CgenNode* node, Symbol cl, vector<op_type>* types);
+	void layout_methods( CgenNode* node, Symbol cl, vector<op_type>* types, vector<const_value>* values );
 
 };
 

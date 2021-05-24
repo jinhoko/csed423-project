@@ -81,37 +81,52 @@ EXTERN Symbol
 	prim_int,
 	prim_bool;
 
-op_type get_symbol_op_type( Symbol t, int ptr_level ) {
+
+////////// Helper functions
+
+op_type get_symbol_op_type( Symbol t, int ptr_level, string class_name ) {					// returns value
 	op_type type;
 	if( t == prim_int ) { type = op_type(INT32); }
 	else if( t == prim_bool ) { type = op_type(INT1); }
 	else if( t == prim_string ) { type = op_type(INT8_PTR); }
+	else if ( t == SELF_TYPE ) { type = op_type( class_name, ptr_level); }
 	else type = op_type( string( t->get_string()), ptr_level );
 	return type;
 }
 
-op_type get_objsymbol_op_type( Symbol t, int ptr_level) {
+op_type* get_symbol_op_type_ptr( Symbol t, int ptr_level, string class_name ) {			// returns heap pointer
+	op_type* type;
+	if( t == prim_int ) { type = new op_type(INT32); }
+	else if( t == prim_bool ) { type = new op_type(INT1); }
+	else if( t == prim_string ) { type = new op_type(INT8_PTR); }
+	else if ( t == SELF_TYPE ) { type = new op_type( class_name, ptr_level); }
+	else type = new op_type( string( t->get_string()), ptr_level );
+	return type;
+}
+
+op_type get_objsymbol_op_type( Symbol t, int ptr_level, string class_name) {				// returns value
 	op_type type;
-	if( t == Int ) {
-		type = op_type(INT32);
-	}
-	else if( t == Bool ) { 
-		type = op_type(INT1);
-	}
-	//else if( t == String ) { type = op_type(INT8_PTR); }
+	if( t == Int ) { type = op_type(INT32); }
+	else if( t == Bool ) { type = op_type(INT1); }
+	else if ( t == SELF_TYPE ) { type = op_type( class_name, ptr_level); }
 	else type = op_type( string( t->get_string()), ptr_level );
 	return type;
 }
 
-op_type get_objsymbol_ptr_op_type( Symbol t) {
+op_type* get_objsymbol_op_type_ptr( Symbol t, int ptr_level, string class_name) {				// returns heap pointer
+	op_type* type;
+	if( t == Int ) { type = new op_type(INT32); }
+	else if( t == Bool ) { type = new op_type(INT1); }
+	else if ( t == SELF_TYPE ) { type = new op_type( class_name, ptr_level); }
+	else type = new op_type( string( t->get_string()), ptr_level );
+	return type;
+}
+
+op_type get_objsymbol_ptr_op_type( Symbol t , string class_name) {
 	op_type type;
-	if( t == Int ) {
-		type = op_type(INT32_PTR);
-	}
-	else if( t == Bool ) { 
-		type = op_type(INT1_PTR);
-	}
-	//else if( t == String ) { type = op_type(INT8_PTR); }	// other types should be called as double pointer
+	if( t == Int ) { type = op_type(INT32_PTR); }
+	else if( t == Bool ) {  type = op_type(INT1_PTR); }
+	else if ( t == SELF_TYPE ) { type = op_type( class_name, 2); }
 	else type = op_type( string( t->get_string()), 2 );
 	return type;
 }
@@ -124,7 +139,7 @@ operand get_default_value( op_type type ) {
 	} else if( type.is_same_with( op_type( "String", 0 ) )){	// String												// String
 		return vp->call( vector<op_type>(), op_type("String", 1), "String_new", true, vector<operand>() );
 	} else {
-		return null_value( type);
+		return null_value( type );
 	}
 }
 
@@ -583,10 +598,6 @@ assert(0 && "All PA4 implementations are deleted");
 void CgenClassTable::code_constants()
 {
 #ifdef PA5
-// 	@str.1 = internal constant [14 x i8] c"<basic class>\00"
-// @String.1 = constant %String {
-//         %String_vtable* @String_vtable_prototype,
-//         i8* getelementptr ([14 x i8], [14 x i8]* @str.1, i32 0, i32 0)
 
 	int size, idx, stridx;
 	for( size = stringtable.first() ; stringtable.more(size) ; size = stringtable.next(size) ) { }
@@ -784,8 +795,20 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTable *ct)
   parentnd(0), children(0), basic_status(bstatus), class_table(ct), tag(-1)
 { 
 	// ADDED
-	method_list = new cool::SymbolTable<Symbol,int>();
-	method_list_idx = 0;
+	methodtable_idx = new cool::SymbolTable<Symbol,int>();
+	methodtable_idx->enterscope();
+	methodtable_return_type = new cool::SymbolTable<Symbol, op_type>();
+	methodtable_return_type->enterscope();
+	methodtable_arg_types = new cool::SymbolTable<Symbol, vector<op_type> >();
+	methodtable_arg_types->enterscope();
+	methodtable_idx_cnt = 0;
+
+
+	attrtable_idx = new cool::SymbolTable<Symbol, int>();
+	attrtable_idx->enterscope();
+	attrtable_type = new cool::SymbolTable<Symbol, op_type>();
+	attrtable_type->enterscope();
+	attrtable_idx_cnt = 0;
 }
 
 void CgenNode::add_child(CgenNode *n)
@@ -832,11 +855,8 @@ void CgenNode::setup(int tag, int depth)
     // define class type
 	vector<op_type> class_types;
 	class_types.push_back( op_type( vtable_name, 1) );
-	layout_attributes( name, &class_types );
-	// TODO ♥ here, should also maintain attribute table
-	//	eg attr_list -> input : symbol output : type, idx in attrtable
-	// also need to rewrite methodtable
-	// eg method_list- > input : symbol output : intype argtypes idx in methodlist
+	attrtable_idx_cnt = 1;										// will start from 1
+	layout_attributes( this, name, &class_types );
     vp->type_define( name->get_string(), class_types );
 
     // define vtable type, values
@@ -850,13 +870,13 @@ void CgenNode::setup(int tag, int depth)
 	vtable_types.push_back( op_type(INT8_PTR) );				// 2 - name
 	vtable_types.push_back( new_func_type );					// 3 - new
 	vtable_values.push_back( int_value(tag) );					// 0 - tag
-	vtable_values.push_back( int_value(tag) );					// TODO resolve
+	vtable_values.push_back( int_value(tag) );					// TODO resolve, if delete, the index_cnt 4 should be changed
 	vtable_values.push_back( class_name_str_op );				// 2 - name
 	vtable_values.push_back(									// 3 - new
 		const_value(new_func_type, "@"+class_name+"_new", true ) ); 	
 
-	method_list_idx = 4; 										// will start from 4 
-	layout_methods( name, &vtable_types, &vtable_values );		// 4~
+	methodtable_idx_cnt = 4; 									// will start from 4 
+	layout_methods( this, name, &vtable_types, &vtable_values );		// 4~
 	
     // vtable type/object definition
 	assert( vtable_types.size() == vtable_values.size() );
@@ -875,56 +895,64 @@ void CgenNode::setup(int tag, int depth)
 // Laying out the features involves creating a Function for each method
 // and assigning each attribute a slot in the class structure.
 void CgenNode::layout_features() { } // Not using.
-void CgenNode::layout_attributes( Symbol cl, vector<op_type>* types ) {
+void CgenNode::layout_attributes( CgenNode* node, Symbol cl, vector<op_type>* types ) {
 	// recurse
-	if( parentnd != NULL ) { parentnd->layout_attributes( cl, types ); }
+	if( parentnd != NULL ) { parentnd->layout_attributes( node, cl, types ); }
 	Feature f; int idx;
-	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
-		f = features->nth(idx);
-		f->add_attribute( cl, string(name->get_string()), types, basic());
-	}
-}
-void attr_class::add_attribute( Symbol cl, string cname, vector<op_type>* types, bool basic ) {	
-	if( basic ) {
-		types->push_back( get_symbol_op_type( type_decl, 1) );
-	} else {
-		types->push_back( get_objsymbol_op_type( type_decl, 1) );
-	}
-}
-void method_class::add_attribute( Symbol cl, string cname,  vector<op_type>* types, bool basic ) { return; }
 
-void CgenNode::layout_methods( Symbol cl, vector<op_type>* types, vector<const_value>* values ) {
-	// recurse
-	if( parentnd != NULL ) { parentnd->layout_methods( cl, types, values ); }
-	Feature f; int idx;
-	method_list->enterscope();
 	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
 		f = features->nth(idx);
-		f->add_method( cl, string(name->get_string()), types, values);
-		method_list->addid( f->get_name(), new int(method_list_idx++) );
+
+		f->add_attribute( node, cl, string(name->get_string()), types, basic());
 	}
 }
-void method_class::add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ) {
+void attr_class::add_attribute( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, bool basic ) {	
+	if( basic ) {
+		types->push_back( get_symbol_op_type( type_decl, 1, string(node->get_name()->get_string())) );
+		node->attrtable_type->addid( name, get_symbol_op_type_ptr(type_decl,1,string(node->get_name()->get_string()) ) );
+	} else {
+		types->push_back( get_objsymbol_op_type( type_decl, 1, string(node->get_name()->get_string())) );
+		node->attrtable_type->addid( name, get_objsymbol_op_type_ptr(type_decl, 1,string(node->get_name()->get_string())) );
+	}
+	node->attrtable_idx->addid( name, new int(node->attrtable_idx_cnt) );
+	node->attrtable_idx_cnt+=1;
+}
+void method_class::add_attribute( CgenNode* node, Symbol cl, string cname,  vector<op_type>* types, bool basic ) { return; }
+
+void CgenNode::layout_methods( CgenNode* node, Symbol cl, vector<op_type>* types, vector<const_value>* values ) {
+	// recurse
+	if( parentnd != NULL ) { parentnd->layout_methods( node, cl, types, values ); }
+	Feature f; int idx;
+
+	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
+		f = features->nth(idx);
+
+		f->add_method( node, cl, string(name->get_string()), types, values);
+	}
+}
+void method_class::add_method( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ) {
 	
 	string target_class_name = cl->get_string();
 	bool isInheritedMethod = target_class_name.compare( cname ) != 0;
 	
 	// result type
-	op_type result_type = (return_type == SELF_TYPE)
-							? op_type( target_class_name, 1 ) : get_objsymbol_op_type( return_type, 1 ) ;
-	op_type orig_result_type = (return_type == SELF_TYPE)
-							? op_type( cname, 1 ) : get_objsymbol_op_type( return_type, 1 ) ;
+	op_type result_type = get_objsymbol_op_type( return_type, 1, target_class_name ) ;
+	op_type orig_result_type = get_objsymbol_op_type( return_type, 1, cname ) ;
+	op_type* result_type_table = get_objsymbol_op_type_ptr( return_type, 1, target_class_name);
 
 	// args
 	vector<op_type> args;
 	vector<op_type> orig_args;
+	vector<op_type>* args_table = new vector<op_type>();
 	args.push_back( op_type(target_class_name, 1) );	// self
 	orig_args.push_back( op_type(cname, 1) );
+	args_table->push_back( op_type(target_class_name, 1) );
 	Formal f; int idx;
 	for( idx = formals->first() ; formals->more(idx) ; idx = formals->next(idx) ) {
 		f = formals->nth(idx);
-		args.push_back( get_objsymbol_op_type( f->get_type_decl() , 1 ) );
-		orig_args.push_back( get_objsymbol_op_type( f->get_type_decl() , 1 ) );
+		args.push_back( get_objsymbol_op_type( f->get_type_decl() , 1, target_class_name ) );
+		orig_args.push_back( get_objsymbol_op_type( f->get_type_decl() , 1, target_class_name ) );
+		args_table->push_back( get_objsymbol_op_type( f->get_type_decl() , 1, target_class_name ) );
 	}
 	op_type t = op_func_type( result_type , args );
 	op_type orig_t = op_func_type( orig_result_type, orig_args );
@@ -936,8 +964,16 @@ void method_class::add_method( Symbol cl, string cname, vector<op_type>* types, 
 	}
 	types->push_back(t);
 	values->push_back(v);
+
+	// add to method table
+	node->methodtable_idx->addid(name, new int(node->methodtable_idx_cnt) );
+	node->methodtable_arg_types->addid( name, args_table );
+	node->methodtable_return_type->addid( name, result_type_table );
+	node->methodtable_idx_cnt +=1 ;
+
+	
 }
-void attr_class::add_method( Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ){ return; }
+void attr_class::add_method( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ){ return; }
 
 //
 // Class codegen. This should performed after every class has been setup.
@@ -1003,10 +1039,9 @@ void CgenNode::code_class()
 	);
 	operand main_ptr_addr = vp->alloca_mem( op_type(class_name, 1) );
 	vp->store( bitcast_ptr, main_ptr_addr );
-	instance_env->add_local( self, main_ptr_addr );
+	instance_env->add_local( self, *(new operand(main_ptr_addr)) );
 
-	// FIRST PASS ; add all members' getelemptr
-	operand attr_ptr, attr_ptr_silent;
+	operand attr_ptr;
 	int feature_idx = 0;
 	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) {
 		f = features->nth(idx);
@@ -1017,12 +1052,12 @@ void CgenNode::code_class()
 				bitcast_ptr,
 				int_value(0),
 				int_value(feature_idx),
-				get_objsymbol_ptr_op_type( f->get_type() )
+				get_objsymbol_ptr_op_type( f->get_type(), class_name )
 			);
 			operand expr_op = f->get_expr()->code(instance_env);
 			bool isExprEmpty = expr_op.get_type().is_same_with( op_type(EMPTY) );
 			if( isExprEmpty ) {	// if empty, store with default value
-				expr_op = get_default_value( get_objsymbol_op_type( f->get_type(), 0) );
+				expr_op = get_default_value( get_objsymbol_op_type( f->get_type(), 0, class_name) );
 			}
 			vp->store( expr_op, attr_ptr);
 		}
@@ -1168,22 +1203,27 @@ void method_class::code(CgenEnvironment *env)
 	Formal f; int idx;
 	for( idx = formals->first() ; formals->more(idx); idx = formals->next(idx) ) {
 		f = formals->nth(idx);
-		op_type arg_type = get_objsymbol_op_type( f->get_type_decl() , 1 );
+		op_type arg_type = get_objsymbol_op_type( f->get_type_decl() , 1, class_name );
 		operand arg = operand(arg_type, string(f->get_name()-> get_string()) );
 		method_args.push_back( arg );
-		env->add_local( f->get_name(), arg );
 	}
-	vp.define( get_objsymbol_op_type( get_return_type(), 1), method_name, method_args );
+	op_type method_return_type = (get_return_type() == SELF_TYPE)
+							? op_type( class_name, 1 ) : get_objsymbol_op_type( get_return_type(), 1, class_name ) ;
+	vp.define( method_return_type, method_name, method_args );
 	// block entry
 	vp.begin_block("entry");
 	for( idx = 0; idx < method_args.size() ; idx+=1 ) {
 		operand addr = vp.alloca_mem( method_args[idx].get_type() );
 		vp.store( method_args[idx], addr );
+		if(idx == 0) {	// self
+			env->add_local( self, *(new operand(addr) ) );
+		} else {		// other args
+			env->add_local( formals->nth(idx-1)->get_name(), *(new operand(addr)) );
+		}
 	}
 // SCOPE 2
 	env->enterscope();
-	vp.ret( operand() );	// TODO change code after finish
-	//vp.ret( expr->code(env) );
+	vp.ret( expr->code(env) );
 
 	// block abort
 	vp.begin_block("abort");
@@ -1192,7 +1232,6 @@ void method_class::code(CgenEnvironment *env)
 
 	vp.end_define();
 }
-
 
 //
 // Codegen for expressions.  Note that each expression has a value.
@@ -1279,7 +1318,7 @@ operand let_class::code(CgenEnvironment *env)
 	op_type var_type = ( string(type_decl->get_string()).compare("Bool") == 0 )
 		? op_type(INT1) : op_type(INT32);
 	operand var = vp.alloca_mem(var_type);
-	env->add_local(identifier, var); // TODO need to enterscope / exitscope 
+	env->add_local(identifier, *(new operand(var)) ); // TODO need to enterscope / exitscope 
 
 	// code for init
 	operand init_op = init->code(env);
@@ -1387,10 +1426,15 @@ operand object_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "Object" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 	
-	op_type obj_type = env->lookup(name)->get_type().is_same_with( op_type(INT32_PTR) )
-		? op_type(INT32) : op_type(INT1) ;
+	op_type obj_type = env->lookup(name)->get_type();
+	if( name == self) {
+		obj_type = op_type(string(env->get_class()->get_name()->get_string()), 1);
+	}
+
 	debug_(" Object type " + obj_type.get_name() , 4);
-	return vp.load( op_type(obj_type), *(env->lookup(name)) );
+	operand result = vp.load( obj_type, *(env->lookup(name)) );
+	debug_( "Object done", 4);
+	return result;
 }
 
 operand no_expr_class::code(CgenEnvironment *env) 
@@ -1423,22 +1467,70 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
+	ValuePrinter vp(*(env->cur_stream));
 
 	// TODO static dispatch
-// 	%tmp.1 = load %Main*, %Main** %tmp.0
-//         %tmp.2 = icmp eq %Main* %tmp.1, null
-//         br i1 %tmp.2, label %abort, label %ok.0
+	// code expr and load
+	operand expr_op = expr->code(env);
+	string expr_classname =string(type_name->get_string()); 
+	string expr_vtablename = expr_classname+"_vtable";
+	string expr_vtableprotname = "@"+expr_classname+"_vtable_prototype";
+	op_type expr_op_type = get_objsymbol_op_type( expr->type, 0, expr_classname);
 
-// ok.0:
-//         %tmp.3 = getelementptr %Main, %Main* %tmp.1, i32 0, i32 0
-//         %tmp.4 = load %Main_vtable*, %Main_vtable** %tmp.3
-//         %tmp.5 = getelementptr %Main_vtable, %Main_vtable* %tmp.4, i32 0, i32 8
-//         %tmp.6 = load %Main* (%Main*,i32) *, %Main* (%Main*,i32) ** %tmp.5
-//         %tmp.7 = call %Main*(%Main*, i32 ) %tmp.6( %Main* %tmp.1, i32 3 )
+	// check if expr == null -> abort
+	operand is_expr_null = vp.icmp( EQ, expr_op, null_value(expr_op_type) );
+	string ok_label = env->new_ok_label();
+	vp.branch_cond( is_expr_null, "abort", ok_label );
 
+	// get vtable and load function
+	vp.begin_block( ok_label );
+	op_type expr_op_vt_type = op_type(expr_vtablename, 2);
+	// FOR DYNAMIC DISPATCH
+		// operand expr_ptr =
+		// 	vp.getelementptr( expr_op_type, expr_op, int_value(0), int_value(0), expr_op_vt_type );
+		// operand expr_vtable =
+		// 	vp.load( op_type(expr_vtablename, 1), expr_ptr );
+		// int fnc_idx = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_idx->lookup(name));		
+		// operand fnc_ptr =
+		// 	vp.getelementptr( op_type(expr_vtablename, 0), expr_vtable, int_value(0), int_value(fnc_idx), BLABLA );
+	
+	// FOR STATIC DISPATCH
+	int fnc_idx = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_idx->lookup(name));		
+	op_type ret_type = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_return_type->lookup(name));
+	vector<op_type> arg_types = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_arg_types->lookup(name));
 
+	op_type fnc_type = op_func_type( ret_type, arg_types  );
+	op_type fnc_ptr_type = op_func_ptr_type(ret_type, arg_types);
+	fnc_type.set_id( OBJ_PPTR );		// forced
+	fnc_ptr_type.set_id( OBJ_PPTR );	// forced
+	operand fnc_ptr =
+		vp.getelementptr( op_type(expr_vtablename, 0), 
+						  const_value( op_type(expr_vtablename, 1), expr_vtableprotname, false)
+						  , int_value(0), int_value(fnc_idx), fnc_ptr_type );
+	
+	// load function
+	operand fnc = vp.load( fnc_type, fnc_ptr );
+
+	// foreach expr actuals, code
+	int idx; Expression e;
+	operand arg_op, arg_typmatch_op;
+	vector<operand> arg_ops;
+	assert( actual->len()+1 == arg_types.size() );
+	arg_ops.push_back( expr_op );					// push self // TODO dispatch / case need to bitcast self?
+	for( idx = 1 ; idx < arg_types.size(); idx++) {	// push other args
+		e = actual->nth(idx);
+		arg_op = e->code(env);
+		if( arg_op.get_type().is_same_with( arg_types[idx] ) ) {			// no need to bitcast
+			arg_typmatch_op = arg_op;
+		} else {															// needs bitcast
+			// TODO boxing if bool or int
+			arg_typmatch_op = vp.bitcast( arg_op, arg_types[idx] );
+		}
+		arg_ops.push_back(arg_typmatch_op);
+	}
+	// call function
+	string fn_name = fnc.get_name().erase(0, 1);
+	vp.call(arg_types, ret_type, fn_name, false, arg_ops );
 
 #endif
 	return operand();
@@ -1450,8 +1542,7 @@ operand dispatch_class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
+	// TODO static dispatch
 #endif
 	return operand();
 }
@@ -1463,8 +1554,7 @@ operand typcase_class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
+	// TODO (later) typecase 
 #endif
 	return operand();
 }
@@ -1475,8 +1565,7 @@ operand new__class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
+	// TODO new
 #endif
 	return operand();
 }
@@ -1487,8 +1576,8 @@ operand isvoid_class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
+	// TODO isvoid
+
 #endif
 	return operand();
 }
@@ -1516,7 +1605,7 @@ void method_class::layout_feature(CgenNode *cls)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// Not Using.
+	// Not Using. Using different functions.
 #endif
 }
 
@@ -1526,7 +1615,7 @@ void attr_class::layout_feature(CgenNode *cls)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// Not Using.
+	// Not Using. Using different functions.
 #endif
 }
 
@@ -1535,6 +1624,6 @@ void attr_class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// Not using.
+	// Not using. All handled in code_class()
 #endif
 }

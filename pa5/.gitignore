@@ -1,5 +1,6 @@
 .vscode/
 local/
+test-2-ref/
 *.exe
 *.bc
 *.ll
