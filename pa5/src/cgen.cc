@@ -784,6 +784,27 @@ void CgenClassTable::code_main()
 	vp.end_define();
 }
 
+Symbol CgenClassTable::get_lub( Symbol s1, Symbol s2 ) {
+
+	CgenNode* node1 = lookup(s1);
+	CgenNode* node2 = lookup(s2);
+
+	CgenNode* p1 = node1;
+	CgenNode* p2 = node2;
+
+	while( true ) {
+		while( p2->get_parentnd() != NULL ) {
+			if( p1 == p2 ) return p1->get_name() ;		// comparing pointer
+			p2 = p2->get_parentnd();
+		}
+		p1 = p1->get_parentnd();
+		p2 = node2;
+	}
+
+	// if not found, lub is object
+	return Object;
+}
+
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -1044,7 +1065,7 @@ void CgenNode::code_class()
 
 	operand attr_ptr;
 	int feature_idx = 0;
-	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) {
+	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) { // TODO ! should do recursive
 		f = features->nth(idx);
 		if( !( f->is_method() ) ) {
 			feature_idx+=1;
@@ -1174,6 +1195,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 	
 	operand result;
 	operand src_box;
+	debug_( "conform : "+src.get_type().get_name() + " - " + type.get_name() , 6);
 	if( src.get_type().is_same_with( type ) ) {			// no need to bitcast
 			result = src;
 	} else {											// needs bitcast
@@ -1273,7 +1295,8 @@ operand assign_class::code(CgenEnvironment *env)
 	ValuePrinter vp(*(env->cur_stream));
 	operand expr_code = expr->code(env);
 	operand target = *(env->lookup(name));
-	operand expr_code_conform = conform( expr_code, target.get_type(), env );
+	op_type target_type = target.get_type().get_deref_type();
+	operand expr_code_conform = conform( expr_code, target_type, env );
 	vp.store(	// store( RHS, LHS )
 		expr_code_conform,
 		target
@@ -1290,23 +1313,29 @@ operand cond_class::code(CgenEnvironment *env)
 	string label_else = env->new_label("else.", false);
 	string label_endif = env->new_label("endif.", true); // increment for next block
 	
-	assert( then_exp->get_type()->equal_string(	// assertation for PA4 // TODO delete
-		else_exp->get_type()->get_string(), else_exp->get_type()->get_len()
-	));
-	op_type result_type = ( string(then_exp->get_type()->get_string()).compare("Bool") == 0 )
-		? op_type(INT1) : op_type(INT32);
+	op_type then_type = get_objsymbol_op_type( then_exp->get_type(), 1, string(env->get_class()->get_name()->get_string()) );
+	op_type else_type = get_objsymbol_op_type( else_exp->get_type(), 1, string(env->get_class()->get_name()->get_string()) );
+	
+	Symbol result_type_s = env->get_class()->get_classtable()->get_lub( then_exp->get_type(), else_exp->get_type() );
+	op_type result_type = get_objsymbol_op_type( result_type_s, 1, string(env->get_class()->get_name()->get_string()) );
+
 	operand result_op = vp.alloca_mem( result_type );
 	
 	// logic
 	vp.branch_cond( pred->code(env), label_then, label_else );
+	
 	vp.begin_block( label_then );
-		vp.store( then_exp->code(env), result_op );
+		operand then_code = then_exp->code(env);
+		operand then_code_conform = conform( then_code, result_type, env);
+		vp.store( then_code_conform, result_op );
 		vp.branch_uncond( label_endif );
 	vp.begin_block( label_else );
-		vp.store( else_exp->code(env), result_op );
+		operand else_code = else_exp->code(env);
+		operand else_code_conform = conform( else_code, result_type, env);
+		vp.store( else_code_conform, result_op );
 		vp.branch_uncond( label_endif );
+
 	vp.begin_block( label_endif );
-		
 	return vp.load( result_type, result_op );
 }
 
@@ -1465,7 +1494,7 @@ operand object_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "Object" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 	
-	op_type obj_type = env->lookup(name)->get_type();
+	op_type obj_type = env->lookup(name)->get_type().get_deref_type();
 	if( name == self) {
 		obj_type = op_type(string(env->get_class()->get_name()->get_string()), 1);
 	}
