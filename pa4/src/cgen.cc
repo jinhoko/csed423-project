@@ -640,6 +640,7 @@ void CgenClassTable::code_main()
 	// Insert return 0
 	vp.ret( int_value(0) );
 
+
 #else
 
 	// Phase 2
@@ -738,6 +739,12 @@ void CgenNode::codeGenMainmain()
 	vp.begin_block("entry");
 
 	mainMethod->code(env); // returns here
+
+	// Block abort
+	vp.begin_block( "abort" );
+	vp.call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
+	vp.unreachable();
+
 
 	vp.end_define();
 
@@ -889,6 +896,7 @@ operand cond_class::code(CgenEnvironment *env)
 		vp.branch_uncond( label_endif );
 	vp.begin_block( label_else );
 		vp.store( else_exp->code(env), result_op );
+		vp.branch_uncond( label_endif );
 	vp.begin_block( label_endif );
 		
 	return vp.load( result_type, result_op );
@@ -976,19 +984,15 @@ operand divide_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "div" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 
-	string label_err = env->new_label("diverr.", false);
-	string label_ok = env->new_label("div.", true);
+	string label_ok = env->new_ok_label();
 	operand e1_code = e1->code(env);
 	operand e2_code = e2->code(env);
 
 	operand denom_zero = vp.icmp( EQ, e2_code, int_value(0) );
-	vp.branch_cond( denom_zero, label_err, label_ok );
-	vp.begin_block(label_err);
-		operand err = 
-			vp.call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
-		vp.unreachable(); // TODO divide_class is it right?
+	vp.branch_cond( denom_zero, "abort", label_ok );
+
 	vp.begin_block(label_ok);
-		return vp.div( e1_code, e2_code );
+	return vp.div( e1_code, e2_code );
 }
 
 operand neg_class::code(CgenEnvironment *env) 

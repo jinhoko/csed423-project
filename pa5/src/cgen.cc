@@ -636,8 +636,7 @@ void StringEntry::code_def(ostream& s, CgenClassTable* ct)
 // generate code to define a global int constant
 void IntEntry::code_def(ostream& s, CgenClassTable* ct)
 {
-	// Leave this method blank, since we are not going to use global
-	// declarations for int constants.
+	// Not using.
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1129,7 +1128,7 @@ void CgenEnvironment::enterscope() {
 }
 
 void CgenEnvironment::add_local(Symbol name, operand &vb) {
-	//var_table.enterscope();
+	var_table.enterscope();			// Always enterscope
 	var_table.addid(name, &vb);
 }
 
@@ -1162,9 +1161,32 @@ void CgenEnvironment::kill_local() {
 // It should only be called when this condition holds.
 // (It's needed by the supplied code for typecase)
 operand conform(operand src, op_type type, CgenEnvironment *env) {
-	// ADD CODE HERE (PA5 ONLY)
-    // TODO conform
-	return operand();
+	
+	ValuePrinter vp(*(env->cur_stream));
+	
+	operand result;
+	operand src_box;
+	if( src.get_type().is_same_with( type ) ) {			// no need to bitcast
+			result = src;
+	} else {											// needs bitcast
+		if( src.get_type().get_id() == INT32 ) {			// box for int
+			src_box = vp.call( vector<op_type>(), op_type("Int", 1), "Int_new", true, vector<operand>() );
+			vector<op_type> op_types; op_types.push_back( op_type("Int", 1)); op_types.push_back( INT32 );
+			vector<operand> ops; ops.push_back( src_box ); ops.push_back( src );
+			op_func_type fnc_type( op_type(VOID), op_types );
+			vp.call( op_types, op_type(VOID), "Int_init", true, ops );
+		} else if( src.get_type().get_id() == INT1 ) {		// box for bool
+			src_box = vp.call( vector<op_type>(), op_type("Bool", 1), "Bool_new", true, vector<operand>() );
+			vector<op_type> op_types; op_types.push_back( op_type("Bool", 1)); op_types.push_back( INT1 );
+			vector<operand> ops; ops.push_back( src_box ); ops.push_back( src );
+			op_func_type fnc_type( op_type(VOID), op_types );
+			vp.call( op_types, op_type(VOID), "Bool_init", true, ops );
+		} else {											// no box for else
+			src_box = src;
+		}
+		result = vp.bitcast( src_box, type );
+	}
+	return result;
 }
 
 // Retrieve the class tag from an object record.
@@ -1173,7 +1195,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 // You need to look up and return the class tag for it's dynamic value
 operand get_class_tag(operand src, CgenNode *src_cls, CgenEnvironment *env) {
 	// ADD CODE HERE (PA5 ONLY)
-    // TODO get_class_tag
+    // TODO (later) get_class_tag
 	return operand();
 }
 #endif
@@ -1242,9 +1264,11 @@ operand assign_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "assign" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 	operand expr_code = expr->code(env);
+	operand target = *(env->lookup(name));
+	operand expr_code_conform = conform( expr_code, target.get_type(), env );
 	vp.store(	// store( RHS, LHS )
-		expr_code,
-		*(env->lookup(name))
+		expr_code_conform,
+		target
 	);
 	return expr_code;
 }
@@ -1258,7 +1282,7 @@ operand cond_class::code(CgenEnvironment *env)
 	string label_else = env->new_label("else.", false);
 	string label_endif = env->new_label("endif.", true); // increment for next block
 	
-	assert( then_exp->get_type()->equal_string(	// assertation for PA4
+	assert( then_exp->get_type()->equal_string(	// assertation for PA4 // TODO delete
 		else_exp->get_type()->get_string(), else_exp->get_type()->get_len()
 	));
 	op_type result_type = ( string(then_exp->get_type()->get_string()).compare("Bool") == 0 )
@@ -1272,6 +1296,7 @@ operand cond_class::code(CgenEnvironment *env)
 		vp.branch_uncond( label_endif );
 	vp.begin_block( label_else );
 		vp.store( else_exp->code(env), result_op );
+		vp.branch_uncond( label_endif );
 	vp.begin_block( label_endif );
 		
 	return vp.load( result_type, result_op );
@@ -1295,7 +1320,7 @@ operand loop_class::code(CgenEnvironment *env)
 		vp.branch_uncond( label_loop );
 	vp.begin_block( label_false );
 
-	return operand(); // TODO (pa4) loop_class is returning void right?
+	return operand();
 } 
 
 operand block_class::code(CgenEnvironment *env) 
@@ -1318,7 +1343,7 @@ operand let_class::code(CgenEnvironment *env)
 	op_type var_type = ( string(type_decl->get_string()).compare("Bool") == 0 )
 		? op_type(INT1) : op_type(INT32);
 	operand var = vp.alloca_mem(var_type);
-	env->add_local(identifier, *(new operand(var)) ); // TODO need to enterscope / exitscope 
+	env->add_local(identifier, *(new operand(var)) );
 
 	// code for init
 	operand init_op = init->code(env);
@@ -1359,19 +1384,15 @@ operand divide_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "div" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 
-	string label_err = env->new_label("diverr.", false);
-	string label_ok = env->new_label("div.", true);
+	string label_ok = env->new_ok_label();
 	operand e1_code = e1->code(env);
 	operand e2_code = e2->code(env);
 
 	operand denom_zero = vp.icmp( EQ, e2_code, int_value(0) );
-	vp.branch_cond( denom_zero, label_err, label_ok );
-	vp.begin_block(label_err);
-		operand err = 
-			vp.call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
-		vp.unreachable(); // TODO (pa4) divide_class is it right?
+	vp.branch_cond( denom_zero, "abort", label_ok );
+
 	vp.begin_block(label_ok);
-		return vp.div( e1_code, e2_code );
+	return vp.div( e1_code, e2_code );
 }
 
 operand neg_class::code(CgenEnvironment *env) 
@@ -1454,11 +1475,20 @@ operand string_const_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "string_const" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
+	operand result();
 #else
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
+	operand result;
+	ValuePrinter vp(*(env->cur_stream));
+	int idx;
+	for( idx = stringtable.first() ; stringtable.more(idx) ; idx = stringtable.next(idx) ) {
+		if( 1 == stringtable.lookup(idx)->equal_string( token->get_string(), token->get_len() ) ) {
+			// match
+			result = const_value( op_type( "String", 1), "@String."+itos(idx), false );
+			break;
+		}
+	}
 #endif
-	return operand();
+	return result;
 }
 
 operand static_dispatch_class::code(CgenEnvironment *env) 
@@ -1466,10 +1496,10 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "static dispatch" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
+	operand result();
 #else
 	ValuePrinter vp(*(env->cur_stream));
 
-	// TODO static dispatch
 	// code expr and load
 	operand expr_op = expr->code(env);
 	string expr_classname =string(type_name->get_string()); 
@@ -1518,22 +1548,17 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	assert( actual->len()+1 == arg_types.size() );
 	arg_ops.push_back( expr_op );					// push self // TODO dispatch / case need to bitcast self?
 	for( idx = 1 ; idx < arg_types.size(); idx++) {	// push other args
-		e = actual->nth(idx);
+		e = actual->nth(idx-1);
 		arg_op = e->code(env);
-		if( arg_op.get_type().is_same_with( arg_types[idx] ) ) {			// no need to bitcast
-			arg_typmatch_op = arg_op;
-		} else {															// needs bitcast
-			// TODO boxing if bool or int
-			arg_typmatch_op = vp.bitcast( arg_op, arg_types[idx] );
-		}
+		arg_typmatch_op = conform(arg_op, arg_types[idx], env);
 		arg_ops.push_back(arg_typmatch_op);
 	}
 	// call function
 	string fn_name = fnc.get_name().erase(0, 1);
-	vp.call(arg_types, ret_type, fn_name, false, arg_ops );
+	operand result = vp.call(arg_types, ret_type, fn_name, false, arg_ops );
 
 #endif
-	return operand();
+	return result;
 }
 
 operand dispatch_class::code(CgenEnvironment *env) 
@@ -1542,7 +1567,7 @@ operand dispatch_class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// TODO static dispatch
+	// TODO dyndispatch 
 #endif
 	return operand();
 }
@@ -1564,10 +1589,19 @@ operand new__class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "newClass" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
+	operand result;
 #else
-	// TODO new
+	ValuePrinter vp(*(env->cur_stream));
+	assert( type_name != SELF_TYPE );		// Exclude - new SELF_TYPE support.
+	operand result;
+
+	string type_name_str = string(type_name->get_string());
+	result = vp.call(
+		vector<op_type>(), op_type(type_name_str, 1), type_name_str+"_new", true, vector<operand>()
+	);
+	
 #endif
-	return operand();
+	return result;
 }
 
 operand isvoid_class::code(CgenEnvironment *env) 
@@ -1575,11 +1609,21 @@ operand isvoid_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "isvoid" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
+	operand result;
 #else
-	// TODO isvoid
+	ValuePrinter vp(*(env->cur_stream));
+	operand result;
+
+	operand expr_op = e1->code(env);
+	debug_( "type: "+expr_op.get_type().get_name() , 4);
+	if( expr_op.get_type().is_same_with( op_type(VOID) ) ) {
+		result = bool_value(true, true);
+	} else {
+		result = bool_value(false, true);
+	}
 
 #endif
-	return operand();
+	return result;
 }
 
 // If the source tag is >= the branch tag and <= (max child of the branch class) tag,
