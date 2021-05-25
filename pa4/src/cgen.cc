@@ -596,8 +596,13 @@ void CgenClassTable::code_main()
 	ValuePrinter vp(*ct_stream);
 
 	// Make string before define
-	string _str = "Main_main() returned %d\n";
-	const_value _str_val ( op_arr_type(INT8, 25), _str, false );
+	// string _str = "Main_main() returned %d\n";
+	// const_value _str_val ( op_arr_type(INT8, 25), _str, false );
+	// vp.init_constant(".str", _str_val);
+
+	// Make string before define 														// EMPTY BASE STRING
+	string _str = "%d";
+	const_value _str_val ( op_arr_type(INT8, 3), _str, false );
 	vp.init_constant(".str", _str_val);
 
 	// Define a function main that has no parameters and returns an i32
@@ -612,8 +617,10 @@ void CgenClassTable::code_main()
 
 	// Get the address of the string "Main_main() returned %d\n" using getelementptr 
 	operand _str_ptr = vp.getelementptr(
-		op_arr_type(INT8, 25),
-		global_value( op_arr_type(INT8_PTR, 25), ".str" , _str_val ),
+		//op_arr_type(INT8, 25),
+		//global_value( op_arr_type(INT8_PTR, 25), ".str" , _str_val ),
+		op_arr_type(INT8, 3),															// EMPTY BASE STRING
+		global_value( op_arr_type(INT8_PTR, 3), ".str" , _str_val ),					// EMPTY BASE STRING
 		int_value(0),
 		int_value(0),
 		op_type(INT8_PTR) 
@@ -920,7 +927,7 @@ operand loop_class::code(CgenEnvironment *env)
 		vp.branch_uncond( label_loop );
 	vp.begin_block( label_false );
 
-	return operand(); // TODO loop_class is returning void right?
+	return operand();
 } 
 
 operand block_class::code(CgenEnvironment *env) 
