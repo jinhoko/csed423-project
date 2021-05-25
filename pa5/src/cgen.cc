@@ -136,7 +136,9 @@ operand get_default_value( op_type type ) {
 		return const_value(op_type(INT1), "false", true);
 	} else if( type.is_same_with( op_type(INT32) ) ){		// Int
 		return const_value(op_type(INT32), "0", true);
-	} else if( type.is_same_with( op_type( "String", 0 ) )){	// String												// String
+	} else if( type.is_same_with( op_type( "String", 0 ) )
+				|| type.is_same_with( op_type( "String", 1) )
+		){	// String												// String
 		return vp->call( vector<op_type>(), op_type("String", 1), "String_new", true, vector<operand>() );
 	} else {
 		return null_value( type );
@@ -1055,10 +1057,16 @@ void CgenNode::code_class()
 			);
 			operand expr_op = f->get_expr()->code(instance_env);
 			bool isExprEmpty = expr_op.get_type().is_same_with( op_type(EMPTY) );
+
+			operand expr_op_conform;
+			op_type target_op_type = get_objsymbol_op_type( f->get_type(), 1, class_name);
+
 			if( isExprEmpty ) {	// if empty, store with default value
-				expr_op = get_default_value( get_objsymbol_op_type( f->get_type(), 0, class_name) );
+				expr_op_conform = get_default_value( target_op_type );
+			} else {
+				expr_op_conform = conform( expr_op, target_op_type, instance_env );
 			}
-			vp->store( expr_op, attr_ptr);
+			vp->store( expr_op_conform, attr_ptr);
 		}
 	}
 
@@ -1339,23 +1347,33 @@ operand let_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "let" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 
+	// code init
+	operand init_op = init->code(env);
+
 	// allocate var
-	op_type var_type = ( string(type_decl->get_string()).compare("Bool") == 0 )
-		? op_type(INT1) : op_type(INT32);
+	op_type var_type;
+	var_type = get_objsymbol_op_type( type_decl, 1, string(env->get_class()->get_name()->get_string()) );
+	debug_("var_type : "+ var_type.get_name(), 4);
+
 	operand var = vp.alloca_mem(var_type);
 	env->add_local(identifier, *(new operand(var)) );
 
-	// code for init
-	operand init_op = init->code(env);
+	// check empty & conform
+	assert( init_op.get_type().is_self_type() == false ); 	// PA5 constraint.
 	bool isExprEmpty = init_op.get_type().is_same_with( op_type(EMPTY) );
+	operand init_op_conform;
 	if( isExprEmpty ) {	// if empty, store with default value
-		init_op = var_type.is_same_with( op_type(INT1) )
-			? const_value(op_type(INT1), "false", true) : const_value(op_type(INT32), "0", true);
+		init_op_conform = get_default_value( var_type );
+	} else {
+		init_op_conform = conform( init_op, var_type, env);
 	}
 	// store( RHS, LHS )
-	vp.store( init_op, var );
+	vp.store( init_op_conform, var );
+
+	operand result = body->code(env);
+	env->kill_local();	// exit scope
 	
-	return body->code(env);
+	return result;
 }
 
 operand plus_class::code(CgenEnvironment *env) 
@@ -1515,16 +1533,7 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	// get vtable and load function
 	vp.begin_block( ok_label );
 	op_type expr_op_vt_type = op_type(expr_vtablename, 2);
-	// FOR DYNAMIC DISPATCH
-		// operand expr_ptr =
-		// 	vp.getelementptr( expr_op_type, expr_op, int_value(0), int_value(0), expr_op_vt_type );
-		// operand expr_vtable =
-		// 	vp.load( op_type(expr_vtablename, 1), expr_ptr );
-		// int fnc_idx = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_idx->lookup(name));		
-		// operand fnc_ptr =
-		// 	vp.getelementptr( op_type(expr_vtablename, 0), expr_vtable, int_value(0), int_value(fnc_idx), BLABLA );
-	
-	// FOR STATIC DISPATCH
+
 	int fnc_idx = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_idx->lookup(name));		
 	op_type ret_type = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_return_type->lookup(name));
 	vector<op_type> arg_types = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_arg_types->lookup(name));
@@ -1566,10 +1575,80 @@ operand dispatch_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "dispatch" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
+	operand result();
 #else
-	// TODO dyndispatch 
+	ValuePrinter vp(*(env->cur_stream));
+
+	// code expr and load (different from static dispatch)
+	operand expr_op = expr->code(env);
+	Symbol type_name = expr->get_type();
+	debug_("target type name : "+string(type_name->get_string()), 4);
+
+	string expr_classname;
+	if( type_name == SELF_TYPE ) {
+		expr_classname = string( env->get_class()->get_name()->get_string()) ;
+	} else {
+		expr_classname = string(type_name->get_string()); 
+	}
+	string expr_vtablename = expr_classname+"_vtable";
+	op_type expr_op_type = get_objsymbol_op_type( expr->type, 0, expr_classname);
+
+	// check if expr == null -> abort
+	operand is_expr_null = vp.icmp( EQ, expr_op, null_value(expr_op_type) );
+	string ok_label = env->new_ok_label();
+	vp.branch_cond( is_expr_null, "abort", ok_label );
+
+	// get vtable and load function (different from static dispatch)
+	vp.begin_block( ok_label );
+	op_type expr_op_vt_type = op_type(expr_vtablename, 2);
+	
+	operand expr_ptr =
+		vp.getelementptr( expr_op_type, expr_op, int_value(0), int_value(0), expr_op_vt_type );
+	operand expr_vtable =
+		vp.load( op_type(expr_vtablename, 1), expr_ptr );
+
+	int fnc_idx;
+	op_type ret_type;
+	vector<op_type> arg_types;
+	if( type_name == SELF_TYPE ) {
+		fnc_idx = *(env->get_class()->methodtable_idx->lookup(name));		
+		ret_type = *(env->get_class()->methodtable_return_type->lookup(name));
+		arg_types = *(env->get_class()->methodtable_arg_types->lookup(name));
+	} else {
+		fnc_idx = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_idx->lookup(name));		
+		ret_type = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_return_type->lookup(name));
+		arg_types = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_arg_types->lookup(name));
+	}
+
+	op_type fnc_type = op_func_type( ret_type, arg_types  );
+	op_type fnc_ptr_type = op_func_ptr_type(ret_type, arg_types);
+	fnc_type.set_id( OBJ_PPTR );		// forced
+	fnc_ptr_type.set_id( OBJ_PPTR );	// forced
+	operand fnc_ptr =
+		vp.getelementptr( op_type(expr_vtablename, 0), 
+						  expr_vtable	// calls vtable by runtime load
+						  , int_value(0), int_value(fnc_idx), fnc_ptr_type );
+	
+	// load function
+	operand fnc = vp.load( fnc_type, fnc_ptr );
+
+	// foreach expr actuals, code
+	int idx; Expression e;
+	operand arg_op, arg_typmatch_op;
+	vector<operand> arg_ops;
+	assert( actual->len()+1 == arg_types.size() );
+	arg_ops.push_back( expr_op );					// push self // TODO dyndispatch / case need to bitcast self?
+	for( idx = 1 ; idx < arg_types.size(); idx++) {	// push other args
+		e = actual->nth(idx-1);
+		arg_op = e->code(env);
+		arg_typmatch_op = conform(arg_op, arg_types[idx], env);
+		arg_ops.push_back(arg_typmatch_op);
+	}
+	// call function
+	string fn_name = fnc.get_name().erase(0, 1);
+	operand result = vp.call(arg_types, ret_type, fn_name, false, arg_ops );
 #endif
-	return operand();
+	return result;
 }
 
 operand typcase_class::code(CgenEnvironment *env)

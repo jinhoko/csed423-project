@@ -3,6 +3,7 @@
 class Main inherits IO
 {
    main() : Int {{
+                main2( 1 );
                 --self@Main.main2(1);
                 --self@Main.main2(false);
                 -- self@Main.main2( "hey" );
