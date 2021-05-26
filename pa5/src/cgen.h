@@ -152,7 +152,8 @@ public:
 
 	// ADD CODE HERE
 	string get_type_name() { return string(name->get_string()); }
-
+	void code_class_new( int* feature_idx, string class_name, operand bitcast_ptr, CgenEnvironment* instance_env);
+	op_type find_main_type();
 
 private:
 	// Layout the methods and attributes for code generation
@@ -207,24 +208,8 @@ public:
 
 	CgenEnvironment(ostream &strea, CgenNode *cur_class);
 
-	/*
-	 * LOGIC CHANGED
-	 *  - if not found from lookup table,
-	 *  - and then find from self.attributes
-	 */
-	operand *lookup(Symbol name)	{
-
-		operand* lookup_result = var_table.lookup(name);
-		if( lookup_result == NULL ) {		
-			// TODO write ♥
-			// search for self.attribute
-				// if no exist, assert false
-			// getelemptr ; Object_new method chamgo
-			// load
-		}
-		return lookup_result;
-		
-	}
+	operand* lookup( Symbol name ); // Impl in cgen.cc
+	
     
 	CgenNode *get_class() { return cur_class; }
 	void set_class(CgenNode *c) { cur_class = c; }

@@ -767,7 +767,11 @@ void CgenClassTable::code_main()
 	vp.call(*ct_stream, vector<op_type>(), "Main_new", true, vector<operand>(), result_Main_obj );
 
 	// Call Main_main(). This returns int* for phase 1, Object for phase 2
-	operand result_Main_main( op_type("Object", 1), "main.retval" );
+	CgenNode* main_class = lookup(Main);
+	op_type main_type = main_class->find_main_type();
+
+	operand result_Main_main( main_type, "main.retval" );
+	
 	vector<op_type> result_Main_main_args_type;
 	vector<operand> result_Main_main_args;
 	result_Main_main_args_type.push_back( op_type("Main", 1) );
@@ -1056,24 +1060,44 @@ void CgenNode::code_class()
 			int_value(0),
 			op_type(class_name+"_vtable", 2)  );
 	vp->store(
-		operand(op_type(class_name+"_vtable", 1), class_name+"_vtable_prototype"  ),
+		global_value( op_type(class_name+"_vtable", 1), class_name+"_vtable_prototype"  ),
 		main_ptr
 	);
 	operand main_ptr_addr = vp->alloca_mem( op_type(class_name, 1) );
 	vp->store( bitcast_ptr, main_ptr_addr );
 	instance_env->add_local( self, *(new operand(main_ptr_addr)) );
 
-	operand attr_ptr;
+	// code
 	int feature_idx = 0;
-	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) { // TODO ! should do recursive
+	code_class_new( &feature_idx, class_name, bitcast_ptr, instance_env);
+
+	vp->ret( bitcast_ptr );
+	// block abort
+	vp->begin_block("abort");
+	vp->call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
+	vp->unreachable();
+	// end define
+	vp->end_define();
+}
+
+void CgenNode::code_class_new( int* feature_idx, string class_name, operand bitcast_ptr, CgenEnvironment* instance_env) {
+
+	// recursively call parent's 
+	if( parentnd != NULL ) {
+		parentnd->code_class_new( feature_idx, class_name, bitcast_ptr, instance_env);
+	}
+
+	operand attr_ptr; 
+	Feature f; int idx;
+	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) {
 		f = features->nth(idx);
 		if( !( f->is_method() ) ) {
-			feature_idx+=1;
+			(*feature_idx)+=1;
 			attr_ptr = vp->getelementptr(
 				op_type( class_name	, 0),
 				bitcast_ptr,
 				int_value(0),
-				int_value(feature_idx),
+				int_value(*feature_idx),
 				get_objsymbol_ptr_op_type( f->get_type(), class_name )
 			);
 			operand expr_op = f->get_expr()->code(instance_env);
@@ -1090,15 +1114,23 @@ void CgenNode::code_class()
 			vp->store( expr_op_conform, attr_ptr);
 		}
 	}
-
-	vp->ret( bitcast_ptr );
-	// block abort
-	vp->begin_block("abort");
-	vp->call( vector<op_type>(), op_type(VOID), "abort", true, vector<operand>() );
-	vp->unreachable();
-	// end define
-	vp->end_define();
 }
+
+op_type CgenNode::find_main_type() {
+	assert( name == Main ); // only valid for main call
+	Feature f; int idx;
+	for( idx = features->first() ; features->more(idx); idx = features->next(idx) ) {
+		f = features->nth(idx);
+
+		char* c = "main";
+		if( f->is_method() && f->get_name()->equal_string( c, 4 ) ) {
+			Symbol main_type_sym = f->get_type();
+			return get_objsymbol_op_type( main_type_sym, 1, string(name->get_string()) );
+		}
+	}
+	assert( 0 && "Main_main should exist");
+}
+
 
 #else
 
@@ -1163,6 +1195,35 @@ void CgenEnvironment::add_local(Symbol name, operand &vb) {
 
 void CgenEnvironment::kill_local() {
 	var_table.exitscope();
+}
+
+/*
+* LOGIC CHANGED
+*  - if not found from lookup table,
+*  - and then find from self.attributes
+*/
+operand *CgenEnvironment::lookup(Symbol name)	{
+
+	debug_("vartable lookup", 6);
+	operand* lookup_result = var_table.lookup(name);
+	if( lookup_result == NULL ) {		
+		operand self_op = *(var_table.lookup(self));
+		operand self_load = vp->load( self_op.get_type().get_deref_type(), self_op );
+		op_type result_type = (*(get_class()->attrtable_type->lookup(name)));
+		debug_("result type : "+result_type.get_name(), 6);
+
+		int feature_idx = *(get_class()->attrtable_idx->lookup(name));
+		operand result = vp->getelementptr(
+			self_op.get_type().get_deref_type().get_deref_type(),
+			self_load,
+			int_value(0),
+			int_value(feature_idx),
+			result_type.get_ptr_type()
+		);
+		lookup_result = new operand(result); // make new operand in heap
+	}
+	return lookup_result;
+	
 }
 
 
@@ -1275,7 +1336,9 @@ void method_class::code(CgenEnvironment *env)
 	}
 // SCOPE 2
 	env->enterscope();
-	vp.ret( expr->code(env) );
+	operand exec_result = expr->code(env);
+	operand exec_result_conform = conform( exec_result, method_return_type, env );
+	vp.ret( exec_result_conform );
 
 	// block abort
 	vp.begin_block("abort");
@@ -1494,13 +1557,14 @@ operand object_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "Object" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 	
-	op_type obj_type = env->lookup(name)->get_type().get_deref_type();
+	operand* obj_var_ptr = env->lookup(name);
+	op_type obj_type = obj_var_ptr->get_type().get_deref_type();
 	if( name == self) {
 		obj_type = op_type(string(env->get_class()->get_name()->get_string()), 1);
 	}
 
 	debug_(" Object type " + obj_type.get_name() , 4);
-	operand result = vp.load( obj_type, *(env->lookup(name)) );
+	operand result = vp.load( obj_type, *(obj_var_ptr) );
 	debug_( "Object done", 4);
 	return result;
 }
@@ -1687,7 +1751,7 @@ operand typcase_class::code(CgenEnvironment *env)
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// TODO (later) typecase 
+	// TODO (later) typecase
 #endif
 	return operand();
 }
