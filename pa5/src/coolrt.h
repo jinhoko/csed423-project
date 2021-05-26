@@ -20,26 +20,26 @@ typedef struct Bool_vtable Bool_vtable;
 
 /* class type definitions */
 struct Object {
-	Object_vtable* vtblptr;
+	const Object_vtable* vtblptr;
 };
 
 struct Int {
-	Int_vtable* vtblptr;
+	const Int_vtable* vtblptr;
 	int val;
 };
 
 struct Bool {
-	Bool_vtable* vtblptr;
+	const Bool_vtable* vtblptr;
 	bool val;
 };
 
 struct String {
-	String_vtable* vtblptr;
+	const String_vtable* vtblptr;
 	char* val;
 };
 
 struct IO {
-	IO_vtable* vtblptr;
+	const IO_vtable* vtblptr;
 };
 
 
@@ -67,7 +67,7 @@ struct IO_vtable {
 
 	void (*IO_init)(IO *self);
 	IO* (*IO_out_string)(IO *self, String *x);
-	IO* (*IO_out_int)(IO *self, Int *x);
+	IO* (*IO_out_int)(IO *self, int x);
 	String* (*IO_in_string)(IO *self);
 	Int* (*IO_in_int)(IO *self);
 };
@@ -106,7 +106,7 @@ struct String_vtable {
 
 	Int* (*String_length)(String *s);
 	String* (*String_concat)(String *s1, String *s2);
-	String* (*String_substr)(String *s, Int *st, Int *en);
+	String* (*String_substr)(String *s, int st, int en);
 };
 
 /* methods in class Object */
@@ -117,23 +117,27 @@ Object* Object_copy(Object *self);
 
 /* methods in class IO */
 IO* IO_new(void);
-void IO_init(IO *self);
+//void IO_init(IO *self);	// no need
 IO* IO_out_string(IO *self, String *x);
-IO* IO_out_int(IO *self, Int *x);
+IO* IO_out_int(IO *self, int x);						// int
 String* IO_in_string(IO *self);
-Int* IO_in_int(IO *self);
+int IO_in_int(IO *self);
 
 /* methods in class Int */
 Int* Int_new(void);
+void Int_init(Int* self, int val);						// int
 
 
 /* methods in class Bool */
 Bool* Bool_new(void);
+void Bool_init(Bool* self, bool val);					// bool
 
 
 /* methods in class String */
 String* String_new(void);
-Int* String_length(String *s);
+int String_length(String *s);
 String* String_concat(String *s1, String *s2);
-String* String_substr(String *s, Int *st, Int *en);
+String* String_substr(String *s, int st, int len);		// int x2
 
+/* etc */
+void* handle_malloc( int size, Object* self );

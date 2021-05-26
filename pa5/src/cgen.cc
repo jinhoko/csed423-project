@@ -1255,27 +1255,48 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 	ValuePrinter vp(*(env->cur_stream));
 	
 	operand result;
-	operand src_box;
-	debug_( "conform : "+src.get_type().get_name() + " - " + type.get_name() , 6);
+	operand src_box; operand src_ptr;
+	debug_( "conform : "+src.get_type().get_name() + " -> " + type.get_name() , 6);
 	if( src.get_type().is_same_with( type ) ) {			// no need to bitcast
 			result = src;
 	} else {											// needs bitcast
+
+		// BOX
 		if( src.get_type().get_id() == INT32 ) {			// box for int
 			src_box = vp.call( vector<op_type>(), op_type("Int", 1), "Int_new", true, vector<operand>() );
 			vector<op_type> op_types; op_types.push_back( op_type("Int", 1)); op_types.push_back( INT32 );
 			vector<operand> ops; ops.push_back( src_box ); ops.push_back( src );
 			op_func_type fnc_type( op_type(VOID), op_types );
 			vp.call( op_types, op_type(VOID), "Int_init", true, ops );
-		} else if( src.get_type().get_id() == INT1 ) {		// box for bool
+			result = vp.bitcast( src_box, type );
+
+		} else if( src.get_type().get_id() == INT1  ) {		// box for bool
 			src_box = vp.call( vector<op_type>(), op_type("Bool", 1), "Bool_new", true, vector<operand>() );
 			vector<op_type> op_types; op_types.push_back( op_type("Bool", 1)); op_types.push_back( INT1 );
 			vector<operand> ops; ops.push_back( src_box ); ops.push_back( src );
 			op_func_type fnc_type( op_type(VOID), op_types );
 			vp.call( op_types, op_type(VOID), "Bool_init", true, ops );
-		} else {											// no box for else
-			src_box = src;
+			result = vp.bitcast( src_box, type );
 		}
-		result = vp.bitcast( src_box, type );
+		// UNBOX
+		else if ( src.get_type().is_int_object() && type.get_id()==INT32 ) {		// unbox for int
+			debug_("unbox!", 8);
+			src_ptr = vp.getelementptr(
+				op_type("Int", 0), src, int_value(0), int_value(1), op_type(INT32_PTR)
+			);
+			result = vp.load( op_type(INT32), src_ptr );
+		} else if (src.get_type().is_bool_object() && type.get_id()==INT1 ) {		// unbox for bool
+			debug_("unbox!", 8);
+			src_ptr = vp.getelementptr(
+				op_type("Bool", 0), src, int_value(0), int_value(1), op_type(INT1_PTR)
+			);
+			result = vp.load( op_type(INT1), src_ptr );
+		}
+		else {											
+			src_box = src;									// no box/unbox
+			result = vp.bitcast( src_box, type );
+		}
+		
 	}
 	return result;
 }
@@ -1521,6 +1542,7 @@ operand lt_class::code(CgenEnvironment *env)
 
 operand eq_class::code(CgenEnvironment *env) 
 {
+	// TODO may need to check
 	if (cgen_debug) std::cerr << "eq" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 	return vp.icmp(EQ, e1->code(env), e2->code(env));
@@ -1744,18 +1766,6 @@ operand dispatch_class::code(CgenEnvironment *env)
 	return result;
 }
 
-operand typcase_class::code(CgenEnvironment *env)
-{
-	if (cgen_debug) 
-		std::cerr << "typecase::code()" << endl;
-#ifndef PA5
-	assert(0 && "Unsupported case for phase 1");
-#else
-	// TODO (later) typecase
-#endif
-	return operand();
-}
-
 operand new__class::code(CgenEnvironment *env) 
 {
 	if (cgen_debug) std::cerr << "newClass" << endl;
@@ -1798,6 +1808,18 @@ operand isvoid_class::code(CgenEnvironment *env)
 	return result;
 }
 
+operand typcase_class::code(CgenEnvironment *env)
+{
+	if (cgen_debug) 
+		std::cerr << "typecase::code()" << endl;
+#ifndef PA5
+	assert(0 && "Unsupported case for phase 1");
+#else
+	// TODO (later) typecase
+#endif
+	return operand();
+}
+
 // If the source tag is >= the branch tag and <= (max child of the branch class) tag,
 // then the branch is a superclass of the source
 operand branch_class::code(operand expr_val, operand tag,
@@ -1805,8 +1827,7 @@ operand branch_class::code(operand expr_val, operand tag,
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
-	// ADD CODE HERE AND REPLACE "return operand()" WITH SOMETHING 
-	// MORE MEANINGFUL
+	// TODO (later) branch
 #endif
 	return operand();
 }

@@ -15,7 +15,7 @@ const char Int_string[] 	= "Int";
 const char Bool_string[] 	= "Bool";
 const char IO_string[] 		= "IO";
 
-const char default_string[]	= "";
+char default_string[]	= "";
 
 /* Class vtable prototypes */
 // will be linked from the cgen program.
@@ -26,23 +26,36 @@ extern const Int_vtable Int_vtable_prototype;
 extern const Bool_vtable Bool_vtable_prototype;
 
 /*
-	All Class_new methods // TODO _new
+	All Class_new methods
 */
-// Object* Object_new(void) {
-
-// }
-// IO* IO_new(void) {
-
-// }
-// Int* Int_new(void) {
-
-// }
-// Bool* Bool_new(void) {
-
-// }
-// String* String_new(void) {
-
-// }
+Object* Object_new(void) {
+	Object* ptr = handle_malloc(sizeof(Object), NULL);
+	ptr->vtblptr = &Object_vtable_prototype;	// init 0
+	return ptr;
+}
+IO* IO_new(void) {
+	IO* ptr = handle_malloc(sizeof(IO), NULL);
+	ptr->vtblptr = &IO_vtable_prototype;		// init 0
+	return ptr;
+}
+Int* Int_new(void) {
+	Int* ptr = handle_malloc(sizeof(Int), NULL);
+	ptr->vtblptr = &Int_vtable_prototype;		// init 0
+	ptr->val = 0;								// init 1
+	return ptr;
+}
+Bool* Bool_new(void) {
+	Bool* ptr = handle_malloc(sizeof(Bool), NULL);
+	ptr->vtblptr = &Bool_vtable_prototype;		// init 0
+	ptr->val = false;							// init 1
+	return ptr;
+}
+String* String_new(void) {
+	String* ptr = handle_malloc(sizeof(String), NULL);
+	ptr->vtblptr = &String_vtable_prototype;	// init 0
+	ptr->val = default_string;					// init 1
+	return ptr;
+}
 
 /*
 // Methods in class object
@@ -66,9 +79,11 @@ const String* Object_type_name(Object *self)
 	return s;
 }
 
-// Object* Object_copy(Object *self) { // TODO Object_copy
-
-// }
+Object* Object_copy(Object *self) {
+	Object* newobj = Object_new();
+	memcpy(newobj, self, sizeof(Object));
+	return newobj;
+}
 
 /*
 // Methods in class IO
@@ -84,13 +99,19 @@ IO* IO_out_string(IO *self, String* x)
 	return self;
 }
 
-IO* IO_out_int(IO *self, Int* x)
+IO* IO_out_int(IO *self, int x)
 {
-	if (self == 0 || x == 0) {
+	// if (self == 0 || x == 0) {
+	// 	fprintf(stderr, "At __FILE__(line __LINE__): NULL object\n");
+	// 	abort();
+	// }
+	// printf("%d",x->val);
+
+	if (self == 0) {
 		fprintf(stderr, "At __FILE__(line __LINE__): NULL object\n");
 		abort();
 	}
-	printf("%d",x->val);
+	printf("%d", x );
 	return self;
 }
 
@@ -149,7 +170,7 @@ String* IO_in_string(IO *self)
  * Any characters following the integer, up to and including the next newline,
  * are discarded by in_int.
  */
-Int* IO_in_int(IO *self)
+int IO_in_int(IO *self)
 {
 	if (self == 0) {
 		fprintf(stderr, "At __FILE__(line __LINE__): self is NULL\n");
@@ -173,24 +194,89 @@ Int* IO_in_int(IO *self)
 		fprintf(stderr, "    Invalid integer on input in IO::in_int()");
 		Object_abort((Object*) self);
 	}
+	return x->val;
+}
+
+/*
+// Methods in class String
+*/
+
+// strlen returns size of char array excluding '\0'
+
+int String_length(String *self) {
+
+	if (self == 0) {
+		fprintf(stderr, "At __FILE__(line __LINE__): self is NULL\n");
+		abort();
+	}
+	Int* x = Int_new();
+	x->val = strlen( self->val );
+	return x->val;
+}
+
+String* String_concat(String *s1, String *s2) {
+	
+	if (s1 == 0) {
+		fprintf(stderr, "At __FILE__(line __LINE__): self is NULL\n");
+		abort();
+	}
+	int s1len = strlen(s1->val);
+	int s2len = strlen(s2->val);
+	char* str = handle_malloc( s1len + s2len + 1, (Object*) s1 );	// call handle_malloc
+	memcpy( str, s1->val, s1len );					// copy s1
+ 	memcpy( (str + s1len) , s2->val, s2len );		// copy s2
+	str[ s1len+s2len ] = '\0';						// append \0
+	
+	String* x = String_new();
+	x->val = str;
 	return x;
 }
 
-// void IO_init(IO *self) { // TODO IO_init
+String* String_substr(String *s, int st, int len) {
 
-// }
+	if (s == 0) {
+		fprintf(stderr, "At __FILE__(line __LINE__): self is NULL\n");
+		abort();
+	}
+	// idx [0,slen-1]
+	int st_val = st; 
+	int len_val = len;
+	int slen = strlen(s->val);
+	
+	// check
+	bool c1 = len_val >= 1;
+	bool c2 = st_val >= 0 && st_val <= slen-1;
+	bool c3 = (st_val+len_val-1) >= 0 && (st_val+len_val-1) <= slen-1;
 
+	if( ! (c1 && c2 && c3) ) {	// if one of the c fails, then runtime error
+		fprintf(stderr, "At __FILE__(line __LINE__):\n   ");
+		fprintf(stderr, "    Invalid integers on input in String::substr()");
+		Object_abort((Object*) s);
+	}
 
-/*
-// Methods in class String // TODO String x3
-*/
+	char* str = handle_malloc( len_val + 1 , (Object*) s );
+	memcpy( str, (s->val)+st_val, len_val );
+	str[ len_val ] = '\0';					// append \0
 
-// Int* String_length(String *s) {
+	String* x = String_new();
+	x->val = str;
+	return x;
+}
 
-// }
-// String* String_concat(String *s1, String *s2) {
+void* handle_malloc( int size, Object* self ) {	// handle heap overflow at runtime
+	void* ptr = malloc( size );
+	if ( ptr == NULL ) {					// Heap overflow occured
+		fprintf(stderr, "At __FILE__(line __LINE__): Heap overflow\n");
+		abort();
+		// unreachable
+	}
+	return ptr;
+}
 
-// }
-// String* String_substr(String *s, Int *st, Int *en) {
+void Int_init(Int* self, int val) {
+	self->val = val;
+}
 
-// }
+void Bool_init(Bool* self, bool val) {
+	self->val = val;
+}
