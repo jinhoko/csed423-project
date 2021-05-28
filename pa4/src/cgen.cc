@@ -962,7 +962,9 @@ operand let_class::code(CgenEnvironment *env)
 	// store( RHS, LHS )
 	vp.store( init_op, var );
 	
-	return body->code(env);
+	operand result = body->code(env);
+	env->kill_local();
+	return result;
 }
 
 operand plus_class::code(CgenEnvironment *env) 
@@ -1054,10 +1056,13 @@ operand object_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "Object" << endl;
 	ValuePrinter vp(*(env->cur_stream));
 	
+	debug_(" lookup : " + string(name->get_string()) + " , type : " + env->lookup(name)->get_type().get_name(), 4);
 	op_type obj_type = env->lookup(name)->get_type().is_same_with( op_type(INT32_PTR) )
 		? op_type(INT32) : op_type(INT1) ;
 	debug_(" Object type " + obj_type.get_name() , 4);
-	return vp.load( op_type(obj_type), *(env->lookup(name)) );
+	operand result = vp.load( op_type(obj_type), *(env->lookup(name)) );
+	debug_(" load done", 4);
+	return result;
 }
 
 operand no_expr_class::code(CgenEnvironment *env) 
