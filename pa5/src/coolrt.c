@@ -9,11 +9,11 @@
    */
 
 /* Class name strings */
-const char Object_string[] 	= "Object";
-const char String_string[] 	= "String";
-const char Int_string[] 	= "Int";
-const char Bool_string[] 	= "Bool";
-const char IO_string[] 		= "IO";
+// const char Object_string[] 	= "Object";
+// const char String_string[] 	= "String";
+// const char Int_string[] 	= "Int";
+// const char Bool_string[] 	= "Bool";
+// const char IO_string[] 		= "IO";
 
 char default_string[]	= "";
 

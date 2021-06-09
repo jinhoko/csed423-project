@@ -46,7 +46,7 @@ struct IO {
 /* vtable type definitions */
 struct Object_vtable {
 	int tag;
-	int address;
+	int objsize;
 	char* name;
 	Object* (*Object_new)(void);
 	
@@ -57,7 +57,7 @@ struct Object_vtable {
 
 struct IO_vtable {
 	int tag;
-	int address; 
+	int objsize; 
 	char* name;
 	IO* (*IO_new)(void);
 
@@ -74,7 +74,7 @@ struct IO_vtable {
 
 struct Int_vtable {
 	int tag;
-	int address;
+	int objsize;
 	char* name;
 	Int* (*Int_new)(void);	
 
@@ -85,7 +85,7 @@ struct Int_vtable {
 
 struct Bool_vtable {
 	int tag;
-	int address;
+	int objsize;
 	char* name;
 	Bool* (*Bool_new)(void);
 
@@ -96,7 +96,7 @@ struct Bool_vtable {
    
 struct String_vtable {
 	int tag;
-	int address;
+	int objsize;
 	char* name;
 	String* (*String_new)(void);
 

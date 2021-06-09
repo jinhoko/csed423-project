@@ -9,6 +9,9 @@
 #include "cgen.h"
 #include <string>
 #include <sstream>
+#include <algorithm>
+
+
 
 #define PA5; // TODO must delete ★ ♥
 // 
@@ -892,11 +895,11 @@ void CgenNode::setup(int tag, int depth)
 	// vtable layout
 	op_type new_func_type = op_func_type( op_type(class_name, 1), vector<op_type>() );
 	vtable_types.push_back( op_type(INT32) );					// 0 - tag
-	vtable_types.push_back( op_type(INT32) );					// 1 - address
+	vtable_types.push_back( op_type(INT32) );					// 1 - objsize
 	vtable_types.push_back( op_type(INT8_PTR) );				// 2 - name
 	vtable_types.push_back( new_func_type );					// 3 - new
 	vtable_values.push_back( int_value(tag) );					// 0 - tag
-	vtable_values.push_back( int_value(tag) );					// TODO resolve, if delete, the index_cnt 4 should be changed
+	vtable_values.push_back( int_value(tag) );					// 1 - objsize
 	vtable_values.push_back( class_name_str_op );				// 2 - name
 	vtable_values.push_back(									// 3 - new
 		const_value(new_func_type, "@"+class_name+"_new", true ) ); 	
@@ -1263,6 +1266,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 
 		// BOX
 		if( src.get_type().get_id() == INT32 ) {			// box for int
+			debug_("conform_box_int!", 8);
 			src_box = vp.call( vector<op_type>(), op_type("Int", 1), "Int_new", true, vector<operand>() );
 			vector<op_type> op_types; op_types.push_back( op_type("Int", 1)); op_types.push_back( INT32 );
 			vector<operand> ops; ops.push_back( src_box ); ops.push_back( src );
@@ -1271,6 +1275,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 			result = vp.bitcast( src_box, type );
 
 		} else if( src.get_type().get_id() == INT1  ) {		// box for bool
+			debug_("conform_box_bool!", 8);
 			src_box = vp.call( vector<op_type>(), op_type("Bool", 1), "Bool_new", true, vector<operand>() );
 			vector<op_type> op_types; op_types.push_back( op_type("Bool", 1)); op_types.push_back( INT1 );
 			vector<operand> ops; ops.push_back( src_box ); ops.push_back( src );
@@ -1279,21 +1284,26 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 			result = vp.bitcast( src_box, type );
 		}
 		// UNBOX
-		else if ( src.get_type().is_int_object() && type.get_id()==INT32 ) {		// unbox for int
-			debug_("unbox!", 8);
+		else if ( src.get_type().is_same_with( op_type("Int", 0) ) && type.get_id()==INT32 ) {		// unbox for int
+			debug_("conform_unbox_int!", 8);
+			operand new_val_ptr = vp.alloca_mem( op_type("Int", 0) );
+			vp.store( src, new_val_ptr );
 			src_ptr = vp.getelementptr(
-				op_type("Int", 0), src, int_value(0), int_value(1), op_type(INT32_PTR)
+				op_type("Int", 0), new_val_ptr, int_value(0), int_value(1), op_type(INT32_PTR)
 			);
 			result = vp.load( op_type(INT32), src_ptr );
-		} else if (src.get_type().is_bool_object() && type.get_id()==INT1 ) {		// unbox for bool
-			debug_("unbox!", 8);
+		} else if (src.get_type().is_same_with( op_type("Bool", 0) ) && type.get_id()==INT1 ) {		// unbox for bool
+			debug_("conform_unbox_bool!", 8);
+			operand new_val_ptr = vp.alloca_mem( op_type("Bool", 0) );
+			vp.store( src, new_val_ptr );
 			src_ptr = vp.getelementptr(
-				op_type("Bool", 0), src, int_value(0), int_value(1), op_type(INT1_PTR)
+				op_type("Bool", 0), new_val_ptr, int_value(0), int_value(1), op_type(INT1_PTR)
 			);
 			result = vp.load( op_type(INT1), src_ptr );
 		}
-		else {											
-			src_box = src;									// no box/unbox
+		else {			
+			debug_("conform_bitcast", 8);								
+			src_box = src;									// no box/unbox but bitcast
 			result = vp.bitcast( src_box, type );
 		}
 		
@@ -1306,9 +1316,30 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 // src_class is the CgenNode for the *static* class of the expression.
 // You need to look up and return the class tag for it's dynamic value
 operand get_class_tag(operand src, CgenNode *src_cls, CgenEnvironment *env) {
-	// ADD CODE HERE (PA5 ONLY)
+
     // TODO (later) get_class_tag
-	return operand();
+	string class_name = string( src_cls->get_name()->get_string() );
+	string class_vtable_name = class_name + "_vtable";
+	
+	// getelemptr vtable entry from object
+	operand vtbl_ptr_ptr =  vp->getelementptr( 
+			op_type( class_name , 0),
+			src,
+			int_value(0),
+			int_value(0),					// 0th index is vtable
+			op_type( class_vtable_name, 2 ) );
+	operand vtbl_ptr = vp->load( op_type(class_vtable_name, 1) , vtbl_ptr_ptr );
+	// lookup src vtable
+	operand tag_ptr =
+		vp->getelementptr( 
+			op_type(class_name+"_vtable", 0),
+			vtbl_ptr,
+			int_value(0),
+			int_value(0),					// 0th index is tag
+			op_type(INT32_PTR));
+	operand tag = vp->load( op_type(INT32), tag_ptr );
+
+	return tag;
 }
 #endif
 
@@ -1635,7 +1666,7 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 
 	// code expr and load
 	operand expr_op = expr->code(env);
-	string expr_classname =string(type_name->get_string()); 
+	string expr_classname = string(type_name->get_string()); 
 	string expr_vtablename = expr_classname+"_vtable";
 	string expr_vtableprotname = "@"+expr_classname+"_vtable_prototype";
 	op_type expr_op_type = get_objsymbol_op_type( expr->type, 0, expr_classname);
@@ -1808,28 +1839,145 @@ operand isvoid_class::code(CgenEnvironment *env)
 	return result;
 }
 
+
+typedef std::pair<int, int> kv;
+bool sort_comp ( const kv& l, const kv& r) {	// descending
+	return l.second > r.second;
+}
+
 operand typcase_class::code(CgenEnvironment *env)
 {
 	if (cgen_debug) 
 		std::cerr << "typecase::code()" << endl;
+	operand result;
+
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
+	ValuePrinter vp(*(env->cur_stream));
 	// TODO (later) typecase
+	
+	operand expr_op = expr->code(env);
+	op_type expr_op_type = expr_op.get_type();
+	Symbol expr_type = expr->get_type();
+	CgenNode* expr_cls = env->type_to_class(expr_type);
+
+	string join_typename;
+	if( type == SELF_TYPE ) {
+		join_typename = string( env->get_class()->get_name()->get_string()) ;
+	} else {
+		join_typename = string( type->get_string() ); 
+	}
+	op_type join_type =  op_type( join_typename, 1);
+
+	string label_ok = env->new_ok_label();
+	string label_st = env->new_label( "case.st.", false); 	
+	string label_en = env->new_label( "case.en.", false);
+
+	operand is_expr_null = vp.icmp( EQ, expr_op, null_value( expr_op_type ) );
+	vp.branch_cond( is_expr_null, "abort", label_ok );
+	
+	// OK BLOCK
+	vp.begin_block( label_ok );
+	operand expr_tag = get_class_tag( expr_op, expr_cls, env );
+	vp.branch_uncond( label_st );
+
+	// START BLOCK
+	vp.begin_block( label_st );
+	operand ret_val_ptr = vp.alloca_mem( join_type );
+	string first_branch = env->new_label("branch.0.st.", false);
+	vp.branch_uncond( first_branch ) ;
+
+
+	Case c; int i, v;
+	// We need to sort cases by tag number in decending order
+	// so that the closest type branch is matched first along the program semantics
+	vector<kv> idx_tag_pair;
+	for( i = cases->first() ; cases->more(i); i = cases->next(i)) {
+		c = cases->nth(i);
+		v = env->type_to_class(c->get_type_decl())->get_tag();
+		idx_tag_pair.push_back( kv(i, v) );
+	}
+	std::stable_sort( idx_tag_pair.begin(), idx_tag_pair.end(), sort_comp );
+
+	for( i = cases->first() ; cases->more(i) ; i = cases->next(i) ) {
+
+		c = cases->nth( idx_tag_pair[i].first ); // fetch ith index from the sorted map
+
+		env->case_branch_index = i;
+		operand branch_expr = c->code( expr_op, expr_tag, join_type, env );
+		vp.store( branch_expr, ret_val_ptr );
+
+		// (cont) branch.i.ok.0
+		vp.branch_uncond( label_en );
+
+		// branch.i.fail.0
+		string branch_fail = env->new_label( "branch."+itos(i)+".fail.", false );
+		vp.begin_block( branch_fail );
+		if( cases->more(i+1) ) {
+			string branch_next_st = env->new_label( "branch."+itos(i+1)+".st.", false);
+			vp.branch_uncond( branch_next_st );
+		} else {
+			vp.branch_uncond( "abort" );
+		}
+
+	}
+
+	vp.begin_block( label_en );
+	string _label = env->new_label( "useless", true ); // increment for next case statement
+	operand ret_val = vp.load( join_type, ret_val_ptr );
+	
+	result = ret_val;
+
 #endif
-	return operand();
+	return result;
 }
 
 // If the source tag is >= the branch tag and <= (max child of the branch class) tag,
 // then the branch is a superclass of the source
 operand branch_class::code(operand expr_val, operand tag,
 				op_type join_type, CgenEnvironment *env) {
+	
+	operand result;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
 #else
 	// TODO (later) branch
+	ValuePrinter vp(*(env->cur_stream));
+
+	string branch_st = env->new_label( "branch."+itos(env->case_branch_index)+".st.", false);
+	string branch_gt = env->new_label( "branch."+itos(env->case_branch_index)+".gt.", false);
+	string branch_ok = env->new_label( "branch."+itos(env->case_branch_index)+".ok.", false);
+	string branch_fail = env->new_label( "branch."+itos(env->case_branch_index)+".fail.", false );
+
+
+	CgenNode* br_cls = env->type_to_class(type_decl);
+	op_type expr_val_type = op_type( string(type_decl->get_string()), 1 );
+
+	int_value br_tag( br_cls->get_tag() );
+	int_value br_maxchild_tag( br_cls->get_max_child() );
+
+	vp.begin_block( branch_st );
+	operand comp1 = vp.icmp( LT, tag, br_tag);
+	vp.branch_cond( comp1, branch_fail, branch_gt );
+
+	vp.begin_block( branch_gt );
+	operand comp2 = vp.icmp( GT, tag, br_maxchild_tag );
+	vp.branch_cond( comp2, branch_fail, branch_ok);
+
+	vp.begin_block( branch_ok );
+	operand expr_val_conform = conform( expr_val, expr_val_type, env );
+	// TODO write expr_val_conform immediately
+	env->add_local( name, expr_val_conform );
+	operand branch_expr_op = expr->code(env);
+	env->kill_local();
+	
+	operand branch_expr_op_conform = conform( branch_expr_op, join_type, env);
+	result = branch_expr_op_conform;
+	// note : rest of the branch will be covered in case::code()
+
 #endif
-	return operand();
+	return result;
 }
 
 //////////////////////////////////

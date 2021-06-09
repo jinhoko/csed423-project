@@ -190,7 +190,9 @@ private:
 	
 public:
 
-	void enterscope();// ADDED
+	void enterscope();	// ADDED
+
+	int case_branch_index;		// ADDED
 
 	std::ostream *cur_stream;
 

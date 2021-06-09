@@ -19,13 +19,13 @@ class Main inherits IO
 		         1;
         }};
    main2( x:Object): Int { x <- 3 };
-   main22(): Int { 1};
+   main22(): Int { 1 };
 };
 class Main2 {
-   main2(): Int { 1};
+   main2(): Int { 1 };
 };
 class Main3 {
-   main3(): SELF_TYPE { self};
+   main3(): SELF_TYPE { self };
 };
 class Main4 inherits Main3 {
    main44():Int { 1};
