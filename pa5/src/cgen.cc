@@ -11,7 +11,7 @@
 #include <sstream>
 #include <algorithm>
 
-#define PA5 // TODO Delete
+//#define PA5
 
 extern int cgen_debug;
 
@@ -897,6 +897,10 @@ void CgenNode::setup(int tag, int depth)
 	vector<op_type> vtable_types;
 	vector<const_value> vtable_values;
 
+	// fetch objsize ; manually write code
+	string objsize_str = "ptrtoint (%" + class_name + "* getelementptr (%" + class_name + ", %" + class_name + "* null, i32 1) to i32)";
+	const_value objsize_const = const_value( op_type(INT32), objsize_str, true ) ;
+
 	// vtable layout
 	op_type new_func_type = op_func_type( op_type(class_name, 1), vector<op_type>() );
 	vtable_types.push_back( op_type(INT32) );					// 0 - tag
@@ -904,7 +908,7 @@ void CgenNode::setup(int tag, int depth)
 	vtable_types.push_back( op_type(INT8_PTR) );				// 2 - name
 	vtable_types.push_back( new_func_type );					// 3 - new
 	vtable_values.push_back( int_value(tag) );					// 0 - tag
-	vtable_values.push_back( int_value(tag) );					// 1 - objsize // TODO change
+	vtable_values.push_back( objsize_const );					// 1 - objsize
 	vtable_values.push_back( class_name_str_op );				// 2 - name
 	vtable_values.push_back(									// 3 - new
 		const_value(new_func_type, "@"+class_name+"_new", true ) ); 	
