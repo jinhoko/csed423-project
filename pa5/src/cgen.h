@@ -48,7 +48,7 @@ public:
 	CgenNode *root();
 	int get_num_classes() const	{ return current_tag; }
 
-	Symbol get_lub( Symbol s1, Symbol s2 );
+	Symbol get_lub( Symbol s1, Symbol s2 , Symbol self);
 
 private:
 	// COMPLETE FUNCTIONS
