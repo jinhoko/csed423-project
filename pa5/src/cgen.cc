@@ -11,10 +11,8 @@
 #include <sstream>
 #include <algorithm>
 
+#define PA5 // TODO Delete
 
-
-#define PA5; // TODO must delete ★ ♥
-// 
 extern int cgen_debug;
 
 void debug_( string str, int space ) {
@@ -1327,7 +1325,9 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 				op_type("Bool", 0), new_val_load, int_value(0), int_value(1), op_type(INT1_PTR)
 			);
 			result = vp.load( op_type(INT1), src_ptr );
-		}
+		} 
+		// TODO conform
+		// SIMPLE BITCAST
 		else {			
 			debug_("conform_bitcast", 8);								
 			src_box = src;									// no box/unbox but bitcast
@@ -1462,7 +1462,7 @@ operand cond_class::code(CgenEnvironment *env)
 
 	operand result_op = vp.alloca_mem( result_type );
 	// logic
-	vp.branch_cond( pred->code(env), label_then, label_else );
+	vp.branch_cond( conform(pred->code(env), op_type(INT1), env), label_then, label_else );
 	
 	vp.begin_block( label_then );
 		operand then_code = then_exp->code(env);
@@ -1682,8 +1682,10 @@ operand object_class::code(CgenEnvironment *env)
 	}
 
 	debug_(" Object type " + obj_type.get_name() , 4);
-	operand result = vp.load( obj_type, *(obj_var_ptr) );
-	debug_( "Object done", 4);
+	// We return pointer of the object instead of the value // TODO confused - object
+	//operand result = vp.load( obj_type, *(obj_var_ptr) );
+	operand result = *obj_var_ptr;
+
 	return result;
 }
 
@@ -1704,7 +1706,7 @@ operand string_const_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "string_const" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
-	operand result();
+	operand result;
 #else
 	operand result;
 	ValuePrinter vp(*(env->cur_stream));
@@ -1725,7 +1727,7 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "static dispatch" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
-	operand result();
+	operand result;
 #else
 	ValuePrinter vp(*(env->cur_stream));
 
@@ -1739,13 +1741,23 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	// check if expr == null -> "abort"
 	string ok_label = env->new_ok_label();
 	operand expr_op_conform = expr_op;
+	// conform primitive types to object
 	if( expr_op.get_type().is_same_with( op_type(INT32) ) ) {
 		expr_op_conform = conform(expr_op, op_type("Int", 0), env);
 	} else if( expr_op.get_type().is_same_with( op_type(INT1)) ) {
 		expr_op_conform = conform(expr_op, op_type("Bool", 0), env);
 	}
-	operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
-	vp.branch_cond( is_expr_null, "abort", ok_label );
+	// TODO static dispatch
+	// if not pointer type, then make it to pointer type
+	// if( ! expr_op_conform.get_type().is_ptr() ) {
+	// 	expr_op_conform = conform(expr_op, expr_op.get_type().get_ptr_type(), env );
+	// }
+	if( expr_op_conform.get_type().is_ptr() ){
+		operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
+		vp.branch_cond( is_expr_null, "abort", ok_label );
+	} else {
+		vp.branch_uncond( ok_label );
+	}
 
 	// get vtable and load function
 	vp.begin_block( ok_label );
@@ -1793,7 +1805,7 @@ operand dispatch_class::code(CgenEnvironment *env)
 	if (cgen_debug) std::cerr << "dispatch" << endl;
 #ifndef PA5
 	assert(0 && "Unsupported case for phase 1");
-	operand result();
+	operand result;
 #else
 	ValuePrinter vp(*(env->cur_stream));
 
@@ -1819,8 +1831,13 @@ operand dispatch_class::code(CgenEnvironment *env)
 	} else if( expr_op.get_type().is_same_with( op_type(INT1)) ) {
 		expr_op_conform = conform(expr_op, op_type("Bool", 0), env);
 	}
-	operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
-	vp.branch_cond( is_expr_null, "abort", ok_label );
+	// TODO dyndispatch
+	if( expr_op_conform.get_type().is_ptr() ){
+		operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
+		vp.branch_cond( is_expr_null, "abort", ok_label );
+	} else {
+		vp.branch_uncond( ok_label );
+	}
 	
 	// get vtable and load function (different from static dispatch)
 	vp.begin_block( ok_label );
@@ -1909,8 +1926,8 @@ operand isvoid_class::code(CgenEnvironment *env)
 	operand expr_op = e1->code(env);
 	debug_( "type: "+expr_op.get_type().get_name() , 4);
 	if( expr_op.get_type().is_same_with( op_type(INT32) )
-		|| expr_op.get_type().is_same_with( op_type(INT32) )   ) {
-		return result;
+		|| expr_op.get_type().is_same_with( op_type(INT1) )   ) {
+		return bool_value(false, true);
 	}
 
 	operand is_expr_null = vp.icmp( EQ, expr_op, null_value( expr_op.get_type() ) );
@@ -1968,8 +1985,12 @@ operand typcase_class::code(CgenEnvironment *env)
 	} else if( expr_op.get_type().is_same_with( op_type(INT1)) ) {
 		expr_op_conform = conform(expr_op, op_type("Bool", 1), env);
 	}
-	operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
-	vp.branch_cond( is_expr_null, "abort", label_ok );
+	if( expr_op_conform.get_type().is_ptr() ){
+		operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
+		vp.branch_cond( is_expr_null, "abort", label_ok );
+	} else {
+		vp.branch_uncond( label_ok );
+	}
 	
 	// OK BLOCK
 	vp.begin_block( label_ok );
