@@ -1,4 +1,4 @@
--- typecase
+-- eq
 
 class Main inherits IO
 {

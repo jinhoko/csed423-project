@@ -904,7 +904,7 @@ void CgenNode::setup(int tag, int depth)
 	vtable_types.push_back( op_type(INT8_PTR) );				// 2 - name
 	vtable_types.push_back( new_func_type );					// 3 - new
 	vtable_values.push_back( int_value(tag) );					// 0 - tag
-	vtable_values.push_back( int_value(tag) );					// 1 - objsize
+	vtable_values.push_back( int_value(tag) );					// 1 - objsize // TODO change
 	vtable_values.push_back( class_name_str_op );				// 2 - name
 	vtable_values.push_back(									// 3 - new
 		const_value(new_func_type, "@"+class_name+"_new", true ) ); 	
@@ -1269,8 +1269,15 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 			result = src;
 	} else {											// needs bitcast
 
+		// LOAD PTR TO VALUE							// OBJ* -> OBJ / OBJ** -> OBJ*
+		if( (src.get_type().is_ptr() || src.get_type().is_pptr()) &&
+			src.get_type().get_deref_type().is_same_with( type )
+		) {
+			result = vp.load( type, src);
+		}
+
 		// BOX
-		if( src.get_type().get_id() == INT32 ) {			// box for int
+		else if( src.get_type().get_id() == INT32 ) {			// INT32 -> Int*
 			debug_("conform_box_int!", 8);
 			src_box = vp.call( vector<op_type>(), op_type("Int", 1), "Int_new", true, vector<operand>() );
 			vector<op_type> op_types; op_types.push_back( op_type("Int", 1)); op_types.push_back( INT32 );
@@ -1279,7 +1286,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 			vp.call( op_types, op_type(VOID), "Int_init", true, ops );
 			result = vp.bitcast( src_box, type );
 
-		} else if( src.get_type().get_id() == INT1  ) {		// box for bool
+		} else if( src.get_type().get_id() == INT1  ) {		// INT1 -> Bool*
 			debug_("conform_box_bool!", 8);
 			src_box = vp.call( vector<op_type>(), op_type("Bool", 1), "Bool_new", true, vector<operand>() );
 			vector<op_type> op_types; op_types.push_back( op_type("Bool", 1)); op_types.push_back( INT1 );
@@ -1289,7 +1296,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 			result = vp.bitcast( src_box, type );
 		}
 		// UNBOX 1 ( object value is input )
-		else if ( src.get_type().is_same_with( op_type("Int", 0) ) && type.get_id()==INT32 ) {		// unbox for int
+		else if ( src.get_type().is_same_with( op_type("Int", 0) ) && type.get_id()==INT32 ) {		// Int -> INT32
 			debug_("conform_unbox_int!", 8);
 			operand new_val_ptr = vp.alloca_mem( op_type("Int", 0) );
 			vp.store( src, new_val_ptr );
@@ -1297,7 +1304,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 				op_type("Int", 0), new_val_ptr, int_value(0), int_value(1), op_type(INT32_PTR)
 			);
 			result = vp.load( op_type(INT32), src_ptr );
-		} else if (src.get_type().is_same_with( op_type("Bool", 0) ) && type.get_id()==INT1 ) {		// unbox for bool
+		} else if (src.get_type().is_same_with( op_type("Bool", 0) ) && type.get_id()==INT1 ) {		// Bool -> INT1
 			debug_("conform_unbox_bool!", 8);
 			operand new_val_ptr = vp.alloca_mem( op_type("Bool", 0) );
 			vp.store( src, new_val_ptr );
@@ -1307,7 +1314,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 			result = vp.load( op_type(INT1), src_ptr );
 		}
 		// UNBOX 2 ( object value is input )
-		else if ( src.get_type().is_same_with( op_type("Int", 1) ) && type.get_id()==INT32 ) {		// unbox for int_ptr
+		else if ( src.get_type().is_same_with( op_type("Int", 1) ) && type.get_id()==INT32 ) {		// Int* -> INT32
 			debug_("conform_unbox_int_ptr!", 8);
 			operand new_val_ptr = vp.alloca_mem( op_type("Int", 1) );
 			vp.store( src, new_val_ptr );
@@ -1316,7 +1323,7 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 				op_type("Int", 0), new_val_load, int_value(0), int_value(1), op_type(INT32_PTR)
 			);
 			result = vp.load( op_type(INT32), src_ptr );
-		} else if (src.get_type().is_same_with( op_type("Bool", 1) ) && type.get_id()==INT1 ) {		// unbox for bool_ptr
+		} else if (src.get_type().is_same_with( op_type("Bool", 1) ) && type.get_id()==INT1 ) {		// Bool* -> INT1
 			debug_("conform_unbox_bool_ptr!", 8);
 			operand new_val_ptr = vp.alloca_mem( op_type("Bool", 1) );
 			vp.store( src, new_val_ptr );
@@ -1326,7 +1333,6 @@ operand conform(operand src, op_type type, CgenEnvironment *env) {
 			);
 			result = vp.load( op_type(INT1), src_ptr );
 		} 
-		// TODO conform
 		// SIMPLE BITCAST
 		else {			
 			debug_("conform_bitcast", 8);								
@@ -1677,14 +1683,18 @@ operand object_class::code(CgenEnvironment *env)
 	
 	operand* obj_var_ptr = env->lookup(name);
 	op_type obj_type = obj_var_ptr->get_type().get_deref_type();
-	if( name == self) {
-		obj_type = op_type(string(env->get_class()->get_name()->get_string()), 1);
-	}
 
-	debug_(" Object type " + obj_type.get_name() , 4);
-	// We return pointer of the object instead of the value // TODO confused - object
-	//operand result = vp.load( obj_type, *(obj_var_ptr) );
-	operand result = *obj_var_ptr;
+	operand result;
+	// Explicitly need to load self
+	if( name == self ) {
+		debug_(" Object type self" , 4);
+		obj_type = op_type(string(env->get_class()->get_name()->get_string()), 1);
+		result = vp.load( obj_type, *obj_var_ptr );
+	} else {
+		debug_(" Object type " + obj_type.get_name() , 4);
+		// We return pointer of the object instead of the value
+		result = *obj_var_ptr;
+	}
 
 	return result;
 }
@@ -1747,11 +1757,7 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	} else if( expr_op.get_type().is_same_with( op_type(INT1)) ) {
 		expr_op_conform = conform(expr_op, op_type("Bool", 0), env);
 	}
-	// TODO static dispatch
-	// if not pointer type, then make it to pointer type
-	// if( ! expr_op_conform.get_type().is_ptr() ) {
-	// 	expr_op_conform = conform(expr_op, expr_op.get_type().get_ptr_type(), env );
-	// }
+
 	if( expr_op_conform.get_type().is_ptr() ){
 		operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
 		vp.branch_cond( is_expr_null, "abort", ok_label );
@@ -1822,6 +1828,12 @@ operand dispatch_class::code(CgenEnvironment *env)
 	}
 	string expr_vtablename = expr_classname+"_vtable";
 	op_type expr_op_type = get_objsymbol_op_type( expr->type, 0, expr_classname);
+	op_type expr_op_ptr_type = get_objsymbol_op_type( expr->type, 1, expr_classname);
+	// for dynamic dispatch, bitcast check is necessary
+	if( expr_op.get_type().get_name().compare( expr_op_ptr_type.get_name() ) != 0 ) {
+		debug_("dyn dispatch bitcast : " + expr_op.get_type().get_name() + ", " + expr_op_ptr_type.get_name() , 4);
+		expr_op = conform( expr_op, expr_op_ptr_type, env);
+	}
 
 	// check if expr == null -> abort
 	string ok_label = env->new_ok_label();
@@ -1831,7 +1843,7 @@ operand dispatch_class::code(CgenEnvironment *env)
 	} else if( expr_op.get_type().is_same_with( op_type(INT1)) ) {
 		expr_op_conform = conform(expr_op, op_type("Bool", 0), env);
 	}
-	// TODO dyndispatch
+
 	if( expr_op_conform.get_type().is_ptr() ){
 		operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_type ) );
 		vp.branch_cond( is_expr_null, "abort", ok_label );
