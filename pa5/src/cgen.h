@@ -17,7 +17,7 @@
 #include "symtab.h"
 #include "value_printer.h"
 
-//#define PA5
+#define PA5
 
 //
 // CgenClassTable represents the top level of a Cool program, which is

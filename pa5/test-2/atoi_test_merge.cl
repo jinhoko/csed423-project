@@ -25,8 +25,8 @@ class Main inherits IO {
      (let z : A2I <- new A2I in
 	while true loop  
 	   (let s : String <- prompt() in
-		if s = "stop" then 
-		    abort() -- we don't bother to terminate gracefully
+		if s = "stop" then
+          abort() -- we don't bother to terminate gracefully
 		else
 		   (let i : Int <- z.a2i(s) in
 			(let news : String <- z.i2a(i) in
@@ -57,7 +57,7 @@ something of type A2I, or simpl write (new A2I).method(argument).
    c2i   Converts a 1-character string to an integer.  Aborts
          if the string is not "0" through "9"
 *)
-class A2I {
+class A2I inherits IO {
 
      c2i(char : String) : Int {
 	if char = "0" then 0 else
@@ -100,13 +100,13 @@ long strings of digits produce strange answers because of arithmetic
 overflow.
 
 *)
-     a2i(s : String) : Int {
+     a2i(s : String) : Int { {
         if s.length() = 0 then 0 else
 	if s.substr(0,1) = "-" then ~a2i_aux(s.substr(1,s.length()-1)) else
         if s.substr(0,1) = "+" then a2i_aux(s.substr(1,s.length()-1)) else
            a2i_aux(s)
-        fi fi fi
-     };
+        fi fi fi;
+     } };
 
 (*
   a2i_aux converts the usigned portion of the string.  As a programming
@@ -114,7 +114,7 @@ example, this method is written iteratively.
 *)
      a2i_aux(s : String) : Int {
 	(let int : Int <- 0 in	
-           {	
+           {
                (let j : Int <- s.length() in
 	          (let i : Int <- 0 in
 		    while i < j loop
@@ -144,12 +144,13 @@ numbers are handled correctly.
 (*
     i2a_aux is an example using recursion.
 *)		
-    i2a_aux(i : Int) : String {
+    i2a_aux(i : Int) : String { {
         if i = 0 then "" else 
 	    (let next : Int <- i / 10 in
 		i2a_aux(next).concat(i2c(i - next * 10))
 	    )
-        fi
+        fi;
+      }
     };
 
 };

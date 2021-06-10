@@ -108,7 +108,7 @@ Class Nil inherits BookList {
 };
 
 
-Class Main {
+Class Main inherits IO{
 
     books : BookList;
 

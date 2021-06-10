@@ -96,6 +96,7 @@ IO* IO_out_string(IO *self, String* x)
 		abort();
 	}
 	printf("%s",x->val);
+	fflush(stdout);			// for immediate print
 	return self;
 }
 
@@ -112,6 +113,7 @@ IO* IO_out_int(IO *self, int x)
 		abort();
 	}
 	printf("%d", x );
+	fflush(stdout);			// for immediate print
 	return self;
 }
 
