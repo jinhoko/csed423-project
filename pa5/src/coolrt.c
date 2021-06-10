@@ -191,7 +191,7 @@ int IO_in_int(IO *self)
 	/* If no text found, abort. */
 	if (num_ints == 0) {
 		fprintf(stderr, "At __FILE__(line __LINE__):\n   ");
-		fprintf(stderr, "    Invalid integer on input in IO::in_int()");
+		fprintf(stderr, "    Invalid integer on input in IO::in_int()\n");
 		Object_abort((Object*) self);
 	}
 	return x->val;
@@ -242,15 +242,20 @@ String* String_substr(String *s, int st, int len) {
 	int st_val = st; 
 	int len_val = len;
 	int slen = strlen(s->val);
+
+	// support negative index
+	if( st_val < 0 ) { st_val = slen + st_val; }
+	// handle start out of index
+	if( st_val > slen-1 ) { len_val = 0; }
 	
-	// check
-	bool c1 = len_val >= 1;
-	bool c2 = st_val >= 0 && st_val <= slen-1;
+	// check condition
+	bool c1 = true; // len_val >= 0;
+	bool c2 = true; // st_val >= 0 && st_val <= slen-1;
 	bool c3 = (st_val+len_val-1) >= 0 && (st_val+len_val-1) <= slen-1;
 
-	if( ! (c1 && c2 && c3) ) {	// if one of the c fails, then runtime error
+	if( ! (c1 && c2 && c3) ) {	// if condition fails, then runtime error
 		fprintf(stderr, "At __FILE__(line __LINE__):\n   ");
-		fprintf(stderr, "    Invalid integers on input in String::substr()");
+		fprintf(stderr, "    Invalid integers on input in String::substr()\n");
 		Object_abort((Object*) s);
 	}
 
