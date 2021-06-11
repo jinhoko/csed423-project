@@ -115,13 +115,15 @@ private:
 
 public:
 
-	cool::SymbolTable<Symbol,int>* methodtable_idx;						// ADDED
+	cool::SymbolTable<Symbol, int>* overridemethodtable;			// ADDED
+
+	cool::SymbolTable<Symbol,int>* methodtable_idx;				// ADDED
 	cool::SymbolTable<Symbol, op_type>* methodtable_return_type;		// ADDED
 	cool::SymbolTable<Symbol, vector<op_type> >* methodtable_arg_types;	// ADDED
-	int methodtable_idx_cnt;											// ADDED ; starts from 0
+	int methodtable_idx_cnt;						// ADDED ; starts from 0
 
-	cool::SymbolTable<Symbol, int>* attrtable_idx;						// ADDED
-	cool::SymbolTable<Symbol, op_type>* attrtable_type;					// ADDED
+	cool::SymbolTable<Symbol, int>* attrtable_idx;				// ADDED
+	cool::SymbolTable<Symbol, op_type>* attrtable_type;			// ADDED
 	int attrtable_idx_cnt;
 	// COMPLETE FUNCTIONS
 
