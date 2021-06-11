@@ -836,6 +836,9 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTable *ct)
   parentnd(0), children(0), basic_status(bstatus), class_table(ct), tag(-1)
 { 
 	// ADDED
+
+	overridemethodtable = new cool::SymbolTable<Symbol, int>();
+	overridemethodtable->enterscope();
 	methodtable_idx = new cool::SymbolTable<Symbol,int>();
 	methodtable_idx->enterscope();
 	methodtable_return_type = new cool::SymbolTable<Symbol, op_type>();
@@ -966,12 +969,24 @@ void method_class::add_attribute( CgenNode* node, Symbol cl, string cname,  vect
 
 void CgenNode::layout_methods( CgenNode* node, Symbol cl, vector<op_type>* types, vector<const_value>* values ) {
 	// recurse
-	if( parentnd != NULL ) { parentnd->layout_methods( node, cl, types, values ); }
 	Feature f; int idx;
+	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
+		f = features->nth(idx);
+		// This is bottom-up symboltable, so that parent class can bypass layouting
+		// if method name is already defined in child class
+		if( f->is_method() ){
+			node->overridemethodtable->addid( f->get_name(), new int(1) ); // FIXME need to add only for method
+		}
+	}
+	if( parentnd != NULL ) { parentnd->layout_methods( node, cl, types, values ); }
 
 	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
 		f = features->nth(idx);
 
+		// If child's overridemethod definition already exists, bypass adding method
+		if( (this != node) && (node->overridemethodtable->lookup( f->get_name() ) != NULL) ) { // TODO think logic!
+			continue;
+		}
 		f->add_method( node, cl, string(name->get_string()), types, values);
 	}
 }

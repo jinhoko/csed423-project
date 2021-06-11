@@ -130,7 +130,6 @@ class Main inherits IO {
     print_list(mylist);
 	 while (not mylist.isNil()) loop
 	    {
-          out_string("he");
 	       print_list(mylist);
 	       mylist <- mylist.tail();
 	    }
