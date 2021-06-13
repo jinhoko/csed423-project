@@ -253,7 +253,7 @@ String* String_substr(String *s, int st, int len) {
 	// check condition
 	bool c1 = true; // len_val >= 0;
 	bool c2 = true; // st_val >= 0 && st_val <= slen-1;
-	bool c3 = (st_val+len_val-1) >= 0 && (st_val+len_val-1) <= slen-1;
+	bool c3 = true; //(st_val+len_val-1) >= 0 && (st_val+len_val-1) <= slen-1;
 
 	if( ! (c1 && c2 && c3) ) {	// if condition fails, then runtime error
 		fprintf(stderr, "At __FILE__(line __LINE__):\n   ");

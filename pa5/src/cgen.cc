@@ -837,7 +837,7 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTable *ct)
 { 
 	// ADDED
 
-	overridemethodtable = new cool::SymbolTable<Symbol, int>();
+	overridemethodtable = new cool::SymbolTable<Symbol, CgenNode>();
 	overridemethodtable->enterscope();
 	methodtable_idx = new cool::SymbolTable<Symbol,int>();
 	methodtable_idx->enterscope();
@@ -972,22 +972,25 @@ void CgenNode::layout_methods( CgenNode* node, Symbol cl, vector<op_type>* types
 	Feature f; int idx;
 	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
 		f = features->nth(idx);
-		// This is bottom-up symboltable, so that parent class can bypass layouting
+		// This is bottom-up symboltable, so that parent class can choose which function to actually locate
 		// if method name is already defined in child class
-		if( f->is_method() ){
-			node->overridemethodtable->addid( f->get_name(), new int(1) ); // FIXME need to add only for method
+		if( f->is_method() && (node->overridemethodtable->lookup( f->get_name() ) == NULL) ){
+			node->overridemethodtable->addid( f->get_name(), this );
 		}
 	}
+
 	if( parentnd != NULL ) { parentnd->layout_methods( node, cl, types, values ); }
 
 	for(idx = features->first() ; features->more(idx); idx = features->next(idx)) {
 		f = features->nth(idx);
 
-		// If child's overridemethod definition already exists, bypass adding method
-		if( (this != node) && (node->overridemethodtable->lookup( f->get_name() ) != NULL) ) { // TODO think logic!
-			continue;
+		// If child's overridemethod definition already exists, select child's function prototype
+		CgenNode* impl_class = node->overridemethodtable->lookup( f->get_name() );
+		if( (this == node ) || (impl_class == NULL) ) {
+			f->add_method( node, cl, string( name->get_string()), types, values);
+		} else {
+			f->add_method( node, cl, string( impl_class->get_name()->get_string()), types, values);
 		}
-		f->add_method( node, cl, string(name->get_string()), types, values);
 	}
 }
 void method_class::add_method( CgenNode* node, Symbol cl, string cname, vector<op_type>* types, vector<const_value>* values ) {
@@ -1797,6 +1800,16 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 #else
 	ValuePrinter vp(*(env->cur_stream));
 
+	// foreach expr actuals, code
+	int idx; Expression e;
+	operand arg_op;
+	vector<operand> arg_ops;
+	for( idx = 1 ; idx < actual->len()+1; idx++) {		// push other args
+		e = actual->nth(idx-1);
+		arg_op = e->code(env);
+		arg_ops.push_back(arg_op);
+	}
+
 	// code expr and load
 	operand expr_op = expr->code(env);
 	string expr_classname = string(type_name->get_string()); 
@@ -1804,7 +1817,6 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	string expr_vtableprotname = "@"+expr_classname+"_vtable_prototype";
 	op_type expr_op_type = get_objsymbol_obj_op_type( expr->type, 0, expr_classname);
 	op_type expr_op_ptr_type = get_objsymbol_obj_op_type( expr->type, 1, expr_classname);
-
 
 	// check if expr == null -> "abort"
 	string ok_label = env->new_ok_label();
@@ -1826,7 +1838,7 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 		vp.branch_uncond( ok_label );
 	}
 
-	// get vtable and load function
+	// get vtable
 	vp.begin_block( ok_label );
 	op_type expr_op_vt_type = op_type(expr_vtablename, 2);
 
@@ -1834,7 +1846,7 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	op_type ret_type = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_return_type->lookup(name));
 	vector<op_type> arg_types = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_arg_types->lookup(name));
 
-	op_type fnc_type = op_func_type( ret_type, arg_types  );
+	op_type fnc_type = op_func_type( ret_type, arg_types );
 	op_type fnc_ptr_type = op_func_ptr_type(ret_type, arg_types);
 	fnc_type.set_id( OBJ_PPTR );		// forced
 	fnc_ptr_type.set_id( OBJ_PPTR );	// forced
@@ -1846,22 +1858,20 @@ operand static_dispatch_class::code(CgenEnvironment *env)
 	// load function
 	operand fnc = vp.load( fnc_type, fnc_ptr );
 
-	// foreach expr actuals, code
-	int idx; Expression e;
-	operand arg_op, arg_typmatch_op;
-	vector<operand> arg_ops;
-	assert( actual->len()+1 == arg_types.size() );
-	operand expr_op_conform_typmatch = conform( expr_op_conform, arg_types[0], env);
-	arg_ops.push_back( expr_op_conform_typmatch );		// push self ; needs to be typecasted for static dispatch
-	for( idx = 1 ; idx < arg_types.size(); idx++) {		// push other args
-		e = actual->nth(idx-1);
-		arg_op = e->code(env);
-		arg_typmatch_op = conform(arg_op, arg_types[idx], env);
-		arg_ops.push_back(arg_typmatch_op);
+	// typmatch ops
+	operand arg_typmatch_op;
+	vector<operand> arg_typmatch_ops;
+	for( idx = 1 ; idx < arg_types.size(); idx++) {	// push other args
+		arg_typmatch_op = conform(arg_ops[idx-1], arg_types[idx], env);
+		arg_typmatch_ops.push_back(arg_typmatch_op);
 	}
+	// push self to first of args list
+	operand expr_op_conform_typmatch = conform( expr_op_conform, arg_types[0], env);
+	arg_typmatch_ops.insert( arg_typmatch_ops.begin(), expr_op_conform_typmatch );		// push self to first; needs to be typecasted for static dispatch
+
 	// call function
 	string fn_name = fnc.get_name().erase(0, 1);
-	operand result = vp.call(arg_types, ret_type, fn_name, false, arg_ops );
+	operand result = vp.call(arg_types, ret_type, fn_name, false, arg_typmatch_ops );
 
 #endif
 	return result;
@@ -1875,6 +1885,17 @@ operand dispatch_class::code(CgenEnvironment *env)
 	operand result;
 #else
 	ValuePrinter vp(*(env->cur_stream));
+
+
+	// foreach expr actuals, code
+	int idx; Expression e;
+	operand arg_op;
+	vector<operand> arg_ops;
+	for( idx = 1 ; idx < actual->len()+1; idx++) {	// push other args
+		e = actual->nth(idx-1);
+		arg_op = e->code(env);
+		arg_ops.push_back(arg_op);
+	}
 
 	// code expr and load (different from static dispatch)
 	operand expr_op = expr->code(env);
@@ -1892,7 +1913,7 @@ operand dispatch_class::code(CgenEnvironment *env)
 	string expr_vtablename = expr_classname+"_vtable";
 	op_type expr_op_type = get_objsymbol_obj_op_type( expr->type, 0, expr_classname);
 	op_type expr_op_ptr_type = get_objsymbol_obj_op_type( expr->type, 1, expr_classname);
-
+	
 	// for dynamic dispatch, bitcast check is necessary
 	// but not for primitive types
 	operand expr_op_conform = expr_op;
@@ -1925,14 +1946,9 @@ operand dispatch_class::code(CgenEnvironment *env)
 		vp.branch_uncond( ok_label );
 	}
 	
-	// get vtable and load function (different from static dispatch)
+	// get vtable (different from static dispatch)
 	vp.begin_block( ok_label );
 	op_type expr_op_vt_type = op_type(expr_vtablename, 2);
-	
-	operand expr_ptr =
-		vp.getelementptr( expr_op_type, expr_op_conform, int_value(0), int_value(0), expr_op_vt_type );
-	operand expr_vtable =
-		vp.load( op_type(expr_vtablename, 1), expr_ptr );
 
 	int fnc_idx;
 	op_type ret_type;
@@ -1946,6 +1962,12 @@ operand dispatch_class::code(CgenEnvironment *env)
 		ret_type = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_return_type->lookup(name));
 		arg_types = *(env->get_class()->get_classtable()->lookup(type_name)->methodtable_arg_types->lookup(name));
 	}
+	
+	operand expr_ptr =
+		vp.getelementptr( expr_op_type, expr_op_conform, int_value(0), int_value(0), expr_op_vt_type );
+	operand expr_vtable =
+		vp.load( op_type(expr_vtablename, 1), expr_ptr );
+
 
 	op_type fnc_type = op_func_type( ret_type, arg_types  );
 	op_type fnc_ptr_type = op_func_ptr_type(ret_type, arg_types);
@@ -1955,25 +1977,23 @@ operand dispatch_class::code(CgenEnvironment *env)
 		vp.getelementptr( op_type(expr_vtablename, 0), 
 						  expr_vtable	// calls vtable by runtime load
 						  , int_value(0), int_value(fnc_idx), fnc_ptr_type );
-	
+
 	// load function
 	operand fnc = vp.load( fnc_type, fnc_ptr );
 
-	// foreach expr actuals, code
-	int idx; Expression e;
-	operand arg_op, arg_typmatch_op;
-	vector<operand> arg_ops;
-	assert( actual->len()+1 == arg_types.size() );
-	arg_ops.push_back( expr_op_conform );			// push self
+	// typematch ops
+	operand arg_typmatch_op;
+	vector<operand> arg_typmatch_ops;
 	for( idx = 1 ; idx < arg_types.size(); idx++) {	// push other args
-		e = actual->nth(idx-1);
-		arg_op = e->code(env);
-		arg_typmatch_op = conform(arg_op, arg_types[idx], env);
-		arg_ops.push_back(arg_typmatch_op);
+		arg_typmatch_op = conform(arg_ops[idx-1], arg_types[idx], env);
+		arg_typmatch_ops.push_back(arg_typmatch_op);
 	}
+	// push self to first of args list
+	arg_typmatch_ops.insert( arg_typmatch_ops.begin(), expr_op_conform );	// push self to the very first
+
 	// call function
 	string fn_name = fnc.get_name().erase(0, 1);
-	operand result = vp.call(arg_types, ret_type, fn_name, false, arg_ops );
+	operand result = vp.call(arg_types, ret_type, fn_name, false, arg_typmatch_ops );
 #endif
 	return result;
 }
@@ -1986,13 +2006,37 @@ operand new__class::code(CgenEnvironment *env)
 	operand result;
 #else
 	ValuePrinter vp(*(env->cur_stream));
-	assert( type_name != SELF_TYPE );		// Exclude - new SELF_TYPE support.
+	// assert( type_name != SELF_TYPE );		// Exclude - new SELF_TYPE support.
 	operand result;
 
-	string type_name_str = string(type_name->get_string());
-	result = vp.call(
+	string type_name_str = string( type_name->get_string() );;
+	if( type_name == SELF_TYPE ) {
+
+		type_name_str = string(env->get_class()->get_name()->get_string());
+		operand self_val = vp.load( op_type(type_name_str, 1), *(env->lookup(self)) );
+		operand self_vtbl_ptr = vp.getelementptr( op_type(type_name_str, 0), self_val, int_value(0), int_value(0), op_type(type_name_str+"_vtable", 2)  );
+		operand self_vtbl = vp.load( op_type(type_name_str+"_vtable", 1), self_vtbl_ptr );
+
+		op_type fnc_type = op_func_type( op_type(type_name_str, 1), vector<op_type>()  );
+		op_type fnc_ptr_type = op_func_ptr_type( op_type(type_name_str, 1), vector<op_type>() );
+
+		fnc_type.set_id( OBJ_PPTR );		// forced
+		fnc_ptr_type.set_id( OBJ_PPTR );	// forced
+		operand fnc_ptr = vp.getelementptr( op_type(type_name_str+"_vtable", 0), 
+						  const_value( op_type(type_name_str+"_vtable", 1), self_vtbl.get_name(), false)
+						  , int_value(0), int_value(3), fnc_ptr_type );
+		// load function
+
+		operand fnc = vp.load( fnc_type, fnc_ptr );
+		result = vp.call(
+			vector<op_type>(), op_type(type_name_str, 1), fnc.get_name().substr(1), false, vector<operand>()
+		);
+
+	} else {
+		result = vp.call(
 		vector<op_type>(), op_type(type_name_str, 1), type_name_str+"_new", true, vector<operand>()
-	);
+		);
+	}
 	
 #endif
 	return result;

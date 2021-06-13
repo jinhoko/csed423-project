@@ -115,7 +115,7 @@ private:
 
 public:
 
-	cool::SymbolTable<Symbol, int>* overridemethodtable;			// ADDED
+	cool::SymbolTable<Symbol, CgenNode>* overridemethodtable;		// ADDED
 
 	cool::SymbolTable<Symbol,int>* methodtable_idx;				// ADDED
 	cool::SymbolTable<Symbol, op_type>* methodtable_return_type;		// ADDED

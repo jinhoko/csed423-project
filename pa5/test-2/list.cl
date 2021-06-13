@@ -126,8 +126,6 @@ class Main inherits IO {
    main() : Object {
       {
 	 mylist <- new List.cons(1).cons(2).cons(3).cons(4).cons(5);
-    out_string("he");
-    print_list(mylist);
 	 while (not mylist.isNil()) loop
 	    {
 	       print_list(mylist);

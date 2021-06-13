@@ -8,5 +8,6 @@ test-2-ref/
 *.ast
 *.o
 *.verify
+*.s
 cgen-1
 cgen-2

@@ -22,7 +22,7 @@ class Main inherits IO
             a:A => a.print();
         esac;
 
-        -- B
+        -- C (!!)
         case new C of
             a:A => a.print();
             b:B => b.print();
