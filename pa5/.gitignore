@@ -1,0 +1,13 @@
+.vscode/
+local/
+test-2-ref/
+*.exe
+*.bc
+*.ll
+*.out
+*.ast
+*.o
+*.verify
+*.s
+cgen-1
+cgen-2
