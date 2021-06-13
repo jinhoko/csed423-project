@@ -11,8 +11,6 @@
 #include <sstream>
 #include <algorithm>
 
-#define PA5
-
 extern int cgen_debug;
 
 void debug_( string str, int space ) {
