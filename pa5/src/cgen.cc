@@ -2060,7 +2060,13 @@ operand isvoid_class::code(CgenEnvironment *env)
 		return bool_value(false, true);
 	}
 
-	operand is_expr_null = vp.icmp( EQ, expr_op, null_value( expr_op.get_type() ) );
+	// if pptr, need to load and check value
+	operand expr_op_conform = expr_op;
+	if( expr_op.get_type().is_pptr() ) {
+		expr_op_conform = vp.load( expr_op.get_type().get_deref_type(), expr_op );
+	}
+
+	operand is_expr_null = vp.icmp( EQ, expr_op_conform, null_value( expr_op_conform.get_type() ) );
 	operand result_ptr = vp.call( vector<op_type>(), op_type("Bool", 1), "Bool_new", true, vector<operand>() );
 	
 	vector<op_type> call_types;
